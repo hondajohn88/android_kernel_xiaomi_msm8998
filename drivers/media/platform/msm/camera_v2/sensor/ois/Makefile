@@ -1,4 +1,4 @@
-ifeq ($(TARGET_PRODUCT),chiron)
+ifneq (,$(findstring chiron,$(TARGET_PRODUCT)))
 	ccflags-y += -D _CHIRON_OIS
 endif
 ccflags-y += -Idrivers/media/platform/msm/camera_v2
