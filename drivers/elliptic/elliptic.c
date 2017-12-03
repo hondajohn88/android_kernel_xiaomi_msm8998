@@ -167,6 +167,8 @@ static void elliptic_data_work_handler(struct work_struct *ws)
 	size_t available_space = 0;
 
 	elliptic_data = container_of(ws, struct elliptic_data, work);
+    
+    EL_PRINT_I("Data work handler");
 
 	if (kfifo_is_empty(&elliptic_data->fifo_isr)) {
 		EL_PRINT_W("work handler called when isr fifo is empty");
@@ -336,6 +338,8 @@ int elliptic_data_push(const char *buffer, size_t buffer_size)
 
 	err = 0;
 	fifo_result = 0;
+    
+    EL_PRINT_I("Pushing data");
 
 	if (buffer_size > ELLIPTIC_MSG_BUF_SIZE) {
 		EL_PRINT_E("buffer size %lu is larger than max buffer size %lu",
@@ -412,11 +416,15 @@ static ssize_t device_read(struct file *fp, char __user *buff,
 	ssize_t bytes_read = 0;
 	struct elliptic_device *elliptic_device;
 	struct elliptic_data *elliptic_data;
+    
+    EL_PRINT_I("Reading data");
 
 	elliptic_device = (struct elliptic_device *)fp->private_data;
 	elliptic_data = (struct elliptic_data *)&elliptic_device->el_data;
 
 	bytes_read = elliptic_data_pop(elliptic_data, buff, length);
+    
+    EL_PRINT_I("Read %zd bytes", bytes_read);
 
 	return bytes_read;
 }
@@ -429,6 +437,8 @@ static ssize_t device_write(struct file *fp, const char *buff,
 	size_t length, loff_t *ppos)
 {
 	ssize_t ret_val;
+    
+    EL_PRINT_I("Writing data");
 
 	ret_val = 0;
 	if ((buff != NULL) && (length != 0))
@@ -450,6 +460,8 @@ static long device_ioctl(struct file *fp, unsigned int number,
 
 	device = (struct elliptic_device *)(fp->private_data);
 	elliptic_data = &device->el_data;
+    
+    EL_PRINT_I("IOCTL operation: %d", number);
 
 	switch (number) {
 	case IOCTL_ELLIPTIC_DATA_IO_CANCEL:
@@ -499,6 +511,8 @@ static unsigned int device_poll(struct file *file,
 
 	struct elliptic_device *device;
 	struct elliptic_data *elliptic_data;
+    
+    EL_PRINT_I("Polling data");
 
 	mask = 0;
 	device = (struct elliptic_device *)file->private_data;
@@ -555,6 +569,8 @@ static int elliptic_device_initialize(struct elliptic_device
 	int err;
 	dev_t device_number;
 	struct device *device;
+    
+    EL_PRINT_I("Initializing device");
 
 	BUG_ON(elliptic_device == NULL || class == NULL);
 
