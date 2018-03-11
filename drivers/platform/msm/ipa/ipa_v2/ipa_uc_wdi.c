@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -107,47 +107,6 @@ enum ipa_cpu_2_hw_wdi_commands {
 		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 6),
 	IPA_CPU_2_HW_CMD_WDI_TEAR_DOWN  =
 		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 7),
-};
-
-/**
- * enum ipa_hw_2_cpu_cmd_resp_status -  Values that represent WDI related
- * command response status to be sent to CPU.
- */
-enum ipa_hw_2_cpu_cmd_resp_status {
-	IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS            =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 0),
-	IPA_HW_2_CPU_MAX_WDI_TX_CHANNELS               =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 1),
-	IPA_HW_2_CPU_WDI_CE_RING_OVERRUN_POSSIBILITY   =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 2),
-	IPA_HW_2_CPU_WDI_CE_RING_SET_UP_FAILURE        =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 3),
-	IPA_HW_2_CPU_WDI_CE_RING_PARAMS_UNALIGNED      =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 4),
-	IPA_HW_2_CPU_WDI_COMP_RING_OVERRUN_POSSIBILITY =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 5),
-	IPA_HW_2_CPU_WDI_COMP_RING_SET_UP_FAILURE      =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 6),
-	IPA_HW_2_CPU_WDI_COMP_RING_PARAMS_UNALIGNED    =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 7),
-	IPA_HW_2_CPU_WDI_UNKNOWN_TX_CHANNEL            =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 8),
-	IPA_HW_2_CPU_WDI_TX_INVALID_FSM_TRANSITION     =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 9),
-	IPA_HW_2_CPU_WDI_TX_FSM_TRANSITION_ERROR       =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 10),
-	IPA_HW_2_CPU_MAX_WDI_RX_CHANNELS               =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 11),
-	IPA_HW_2_CPU_WDI_RX_RING_PARAMS_UNALIGNED      =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 12),
-	IPA_HW_2_CPU_WDI_RX_RING_SET_UP_FAILURE        =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 13),
-	IPA_HW_2_CPU_WDI_UNKNOWN_RX_CHANNEL            =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 14),
-	IPA_HW_2_CPU_WDI_RX_INVALID_FSM_TRANSITION     =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 15),
-	IPA_HW_2_CPU_WDI_RX_FSM_TRANSITION_ERROR       =
-		FEATURE_ENUM_VAL(IPA_HW_FEATURE_WDI, 16),
 };
 
 /**
@@ -623,7 +582,8 @@ static void ipa_save_uc_smmu_mapping_pa(int res_idx, phys_addr_t pa,
 {
 	IPADBG("--res_idx=%d pa=0x%pa iova=0x%lx sz=0x%zx\n", res_idx,
 			&pa, iova, len);
-	wdi_res[res_idx].res = kzalloc(sizeof(struct ipa_wdi_res), GFP_KERNEL);
+	wdi_res[res_idx].res = kzalloc(sizeof(*wdi_res[res_idx].res),
+					GFP_KERNEL);
 	if (!wdi_res[res_idx].res)
 		BUG();
 	wdi_res[res_idx].nents = 1;
@@ -649,8 +609,8 @@ static void ipa_save_uc_smmu_mapping_sgt(int res_idx, struct sg_table *sgt,
 		return;
 	}
 
-	wdi_res[res_idx].res = kcalloc(sgt->nents, sizeof(struct ipa_wdi_res),
-			GFP_KERNEL);
+	wdi_res[res_idx].res = kcalloc(sgt->nents,
+		sizeof(*wdi_res[res_idx].res), GFP_KERNEL);
 	if (!wdi_res[res_idx].res)
 		BUG();
 	wdi_res[res_idx].nents = sgt->nents;
@@ -1713,7 +1673,7 @@ int ipa_write_qmapid_wdi_pipe(u32 clnt_hdl, u8 qmap_id)
 
 	if (clnt_hdl >= ipa_ctx->ipa_num_pipes ||
 	    ipa_ctx->ep[clnt_hdl].valid == 0) {
-		IPAERR("bad parm, %d\n", clnt_hdl);
+		IPAERR_RL("bad parm, %d\n", clnt_hdl);
 		return -EINVAL;
 	}
 
@@ -1726,7 +1686,7 @@ int ipa_write_qmapid_wdi_pipe(u32 clnt_hdl, u8 qmap_id)
 	ep = &ipa_ctx->ep[clnt_hdl];
 
 	if (!(ep->uc_offload_state & IPA_WDI_CONNECTED)) {
-		IPAERR("WDI channel bad state %d\n", ep->uc_offload_state);
+		IPAERR_RL("WDI channel bad state %d\n", ep->uc_offload_state);
 		return -EFAULT;
 	}
 

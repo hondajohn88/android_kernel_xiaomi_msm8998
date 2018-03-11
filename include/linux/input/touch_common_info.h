@@ -1,22 +1,31 @@
-/*
- * Copyright (C) 2017 XiaoMi, Inc.
- */
 #ifndef _TOUCH_COMMON_INFO_H_
 #define _TOUCH_COMMON_INFO_H_
 
 /*
- *vendor info array, vendor index and vendor name, if add new vendor info, need insert before 0xff
+ *if add new vendor info, need insert before default
  */
-struct touch_vendor_info {
-	u8 vendor_id;
-	char *vendor_name;
-};
-struct touch_vendor_info tv_info_array[] = {
-	{0x31, "Biel"},
-	{0x32, "Lens"},
-	{0x34, "Ofilm"},
-	{0x38, "Sharp"},
-	{0x42, "Lg"},
-	{0xff, "Unknown"}
 
+#define HWCOMPONENT_NAME_TOUCH                 "touch"
+#define HWCOMPONENT_KEY_IC                     "TOUCH IC"
+#define HWCOMPONENT_KEY_MODULE                 "TP MAKER"
+static inline u8 *update_hw_component_touch_module_info(unsigned int value)
+{
+	switch (value) {
+	case 0x31:
+		  return "Biel";
+	case 0x32:
+		  return "Lens";
+	case 0x34:
+		  return "Ofilm";
+	case 0x38:
+		  return "Sharp";
+	case 0x41:
+		  return "Ebbg";
+	case 0x42:
+		  return "Lg";
+	default:
+		  return "Unknown";
+	}
+
+}
 #endif

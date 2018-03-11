@@ -4,13 +4,13 @@
 * Rule         : Use TAB 4
 *
 * Copyright(c) Rohm Co.,Ltd. All rights reserved
-* Copyright (C) 2017 XiaoMi, Inc.
+* Copyright (C) 2018 XiaoMi, Inc.
 *************************************************************************/
 /***** ROHM Confidential ***************************************************/
 #ifndef OIS_COEF_H
 #define OIS_COEF_H
 
-const OIS_UBYTE DOWNLOAD_COEF[] = {
+const OIS_UBYTE DOWNLOAD_COEF[] = { /* DOWNLOAD_169_SEMCO_LSM6DSM_036_SEMCO_Xiaomi_C1.mem */
 	0xef,
 	0x00,
 	0x00,

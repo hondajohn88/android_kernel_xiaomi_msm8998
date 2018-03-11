@@ -167,6 +167,8 @@ obj-$(CONFIG_GENERIC_NET_UTILS) += net_utils.o
 obj-$(CONFIG_SG_SPLIT) += sg_split.o
 obj-$(CONFIG_STMP_DEVICE) += stmp_device.o
 
+obj-$(CONFIG_STACKDEPOT) += stackdepot.o
+
 libfdt_files = fdt.o fdt_ro.o fdt_wip.o fdt_rw.o fdt_sw.o fdt_strerror.o \
 	       fdt_empty_tree.o
 $(foreach file, $(libfdt_files), \
@@ -181,8 +183,6 @@ obj-$(CONFIG_PERCPU_TEST) += percpu_test.o
 obj-$(CONFIG_ASN1) += asn1_decoder.o
 
 obj-$(CONFIG_FONT_SUPPORT) += fonts/
-
-obj-$(CONFIG_CJSON) += cJSON.o
 
 hostprogs-y	:= gen_crc32table
 clean-files	:= crc32table.h

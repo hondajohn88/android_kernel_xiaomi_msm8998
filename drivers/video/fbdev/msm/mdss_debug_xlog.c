@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,14 +29,15 @@
 #define XLOG_DEFAULT_REGDUMP 0x2 /* dump in RAM */
 #define XLOG_DEFAULT_DBGBUSDUMP 0x2 /* dump in RAM */
 #define XLOG_DEFAULT_VBIF_DBGBUSDUMP 0x2 /* dump in RAM */
+#define XLOG_DEFAULT_DSI_DBGBUSDUMP 0x2 /* dump in RAM */
 #else
 #define XLOG_DEFAULT_ENABLE 0
 #define XLOG_DEFAULT_PANIC 0
 #define XLOG_DEFAULT_REGDUMP 0 /* dump in RAM */
 #define XLOG_DEFAULT_DBGBUSDUMP 0 /* dump in RAM */
 #define XLOG_DEFAULT_VBIF_DBGBUSDUMP 0 /* dump in RAM */
+#define XLOG_DEFAULT_DSI_DBGBUSDUMP 0 /* dump in RAM */
 #endif
-#define XLOG_DEFAULT_DSI_DBGBUSDUMP 0x2 /* dump in RAM */
 
 /*
  * xlog will print this number of entries when it is called through

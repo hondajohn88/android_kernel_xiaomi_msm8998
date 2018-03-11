@@ -4,13 +4,13 @@
 * Rule        : Use TAB 4
 *
 * Copyright(c)	Rohm Co.,Ltd. All rights reserved
-* Copyright (C) 2017 XiaoMi, Inc.
+* Copyright (C) 2018 XiaoMi, Inc.
 *
 **************************** ROHM Confidential ***************************/
 #ifndef OIS_PROG_H
 #define OIS_PROG_H
 
-const OIS_UBYTE DOWNLOAD_BIN[] = {
+const OIS_UBYTE DOWNLOAD_BIN[] = { /* DOWNLOAD37d_SEMCO_Xiaomi_C1.bin */
 	0x00,
 	0xFC,
 	0xD1,

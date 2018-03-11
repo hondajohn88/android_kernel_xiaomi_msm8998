@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -48,7 +48,7 @@
 #define SCM_EDLOAD_MODE			0X01
 #define SCM_DLOAD_CMD			0x10
 #define SCM_DLOAD_MINIDUMP		0X20
-
+#define SCM_DLOAD_BOTHDUMPS	(SCM_DLOAD_MINIDUMP | SCM_DLOAD_FULLDUMP)
 
 static int restart_mode;
 static void *restart_reason;
@@ -72,11 +72,10 @@ static void scm_disable_sdi(void);
 #endif
 
 static int in_panic;
-static int download_mode;
 static int dload_type = SCM_DLOAD_FULLDUMP;
+static int download_mode;
 static struct kobject dload_kobj;
 static void *dload_mode_addr, *dload_type_addr;
-static bool dload_mode_enabled;
 static void *emergency_dload_mode_addr;
 #ifdef CONFIG_RANDOMIZE_BASE
 static void *kaslr_imem_addr;
@@ -149,13 +148,11 @@ static void set_dload_mode(int on)
 	ret = scm_set_dload_mode(on ? dload_type : 0, 0);
 	if (ret)
 		pr_err("Failed to set secure DLOAD mode: %d\n", ret);
-
 	if (!on)
 		scm_disable_sdi();
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 
-	dload_mode_enabled = on;
 }
 
 int get_dload_mode(void)
@@ -163,7 +160,7 @@ int get_dload_mode(void)
 	return download_mode;
 }
 
-static void enable_emergency_dload_mode(void)
+__attribute__((unused)) static void enable_emergency_dload_mode(void)
 {
 	int ret;
 
@@ -342,9 +339,10 @@ static void msm_restart_prepare(const char *cmd)
 			if (!ret)
 				__raw_writel(0x6f656d00 | (code & 0xff),
 					     restart_reason);
+#ifdef CONFIG_ALLOW_REBOOT_TO_EDL
 		} else if (!strncmp(cmd, "edl", 3)) {
-			if (0)
-				enable_emergency_dload_mode();
+			enable_emergency_dload_mode();
+#endif
 		} else {
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
 			__raw_writel(0x77665501, restart_reason);
@@ -404,6 +402,7 @@ static void do_msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	if (WDOG_BITE_ON_PANIC && in_panic)
 		msm_trigger_wdog_bite();
 #endif
+
 	scm_disable_sdi();
 	halt_spmi_pmic_arbiter();
 	deassert_ps_hold();
@@ -507,7 +506,8 @@ static ssize_t show_dload_mode(struct kobject *kobj, struct attribute *attr,
 				char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE, "DLOAD dump type: %s\n",
-			(dload_type == SCM_DLOAD_MINIDUMP) ? "mini" : "full");
+		(dload_type == SCM_DLOAD_BOTHDUMPS) ? "both" :
+		((dload_type == SCM_DLOAD_MINIDUMP) ? "mini" : "full"));
 }
 
 static size_t store_dload_mode(struct kobject *kobj, struct attribute *attr,
@@ -521,8 +521,16 @@ static size_t store_dload_mode(struct kobject *kobj, struct attribute *attr,
 			return -ENODEV;
 		}
 		dload_type = SCM_DLOAD_MINIDUMP;
-	} else {
-		pr_err("Invalid value. Use 'full' or 'mini'\n");
+	} else if (sysfs_streq(buf, "both")) {
+		if (!minidump_enabled) {
+			pr_err("Minidump not enabled, setting fulldump only\n");
+			dload_type = SCM_DLOAD_FULLDUMP;
+			return count;
+		}
+		dload_type = SCM_DLOAD_BOTHDUMPS;
+	} else{
+		pr_err("Invalid Dump setup request..\n");
+		pr_err("Supported dumps:'full', 'mini', or 'both'\n");
 		return -EINVAL;
 	}
 

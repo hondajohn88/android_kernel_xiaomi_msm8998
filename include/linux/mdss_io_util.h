@@ -1,5 +1,5 @@
-/* Copyright (c) 2012, 2016, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+/* Copyright (c) 2012, 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -59,6 +59,8 @@ struct dss_vreg {
 	int post_on_sleep;
 	int pre_off_sleep;
 	int post_off_sleep;
+	bool lp_disable_allowed;
+	bool disabled;
 };
 
 struct dss_gpio {
@@ -115,5 +117,6 @@ bool mdss_prim_panel_is_dead(void);
 void mdss_panel_reset_skip_enable(bool enable);
 void mdss_dsi_ulps_enable(bool enable);
 void mdss_dsi_ulps_suspend_enable(bool enable);
+int mdss_prim_panel_fb_unblank(int timeout);
 
 #endif /* __MDSS_IO_UTIL_H__ */

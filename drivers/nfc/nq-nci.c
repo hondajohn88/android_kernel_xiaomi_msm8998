@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -923,7 +923,7 @@ static int nqx_probe(struct i2c_client *client,
 
 	wake_lock_init(&fieldon_wl, WAKE_LOCK_SUSPEND, "nfc_locker");
 	nqx_dev->nqx_device.minor = MISC_DYNAMIC_MINOR;
-	nqx_dev->nqx_device.name = "pn553";//"nq-nci";
+	nqx_dev->nqx_device.name = "pn553";
 	nqx_dev->nqx_device.fops = &nfc_dev_fops;
 
 	r = misc_register(&nqx_dev->nqx_device);
@@ -1085,6 +1085,7 @@ static struct i2c_driver nqx = {
 		.owner = THIS_MODULE,
 		.name = "nq-nci",
 		.of_match_table = msm_match_table,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 		.pm = &nfc_pm_ops,
 	},
 };

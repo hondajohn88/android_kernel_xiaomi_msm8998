@@ -59,6 +59,7 @@ int gf_parse_dts(struct gf_dev *gf_dev)
 	}
 	gpio_direction_input(gf_dev->irq_gpio);
 
+
 	gpio_direction_output(gf_dev->pwr_gpio, 1);
 
 	return 0;
@@ -94,7 +95,7 @@ int gf_power_on(struct gf_dev *gf_dev)
 	return rc;
 }
 
-int gf_power_off(struct gf_dev* gf_dev)
+int gf_power_off(struct gf_dev *gf_dev)
 {
 	int rc = 0;
 	if (gpio_is_valid(gf_dev->pwr_gpio)) {

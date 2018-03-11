@@ -2,6 +2,7 @@
  *  syscore.c - Execution of system core operations.
  *
  *  Copyright (C) 2011 Rafael J. Wysocki <rjw@sisk.pl>, Novell Inc.
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *
  *  This file is released under the GPLv2.
  */
@@ -55,9 +56,8 @@ int syscore_suspend(void)
 	pr_debug("Checking wakeup interrupts\n");
 
 	/* Return error code if there are any wakeup interrupts pending. */
-	if (pm_wakeup_pending()) {
+	if (pm_wakeup_pending())
 		return -EBUSY;
-	}
 
 	WARN_ONCE(!irqs_disabled(),
 		"Interrupts enabled before system core suspend.\n");

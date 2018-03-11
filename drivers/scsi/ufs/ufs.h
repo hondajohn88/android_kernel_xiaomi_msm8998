@@ -3,7 +3,7 @@
  *
  * This code is based on drivers/scsi/ufs/ufs.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>

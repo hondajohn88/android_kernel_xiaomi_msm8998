@@ -1,5 +1,5 @@
 /* Copyright (c) 2008-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -800,6 +800,8 @@ struct mdss_panel_info {
 	u32 rst_seq_len;
 	u32 vic; /* video identification code */
 	u32 deep_color;
+	int esd_err_irq_gpio;
+	int esd_err_irq;
 	struct mdss_rect roi;
 	struct mdss_dsi_dual_pu_roi dual_roi;
 	int pwm_pmic_gpio;
@@ -925,6 +927,16 @@ struct mdss_panel_info {
 
 	/* debugfs structure for the panel */
 	struct mdss_panel_debugfs_info *debugfs_info;
+	u64 panel_active;
+	u64 kickoff_count;
+	u64 boottime;
+	u64 bootRTCtime;
+	u64 bootdays;
+
+	u64 bl_duration;
+	u64 bl_level_integral;
+	u64 bl_highlevel_duration;
+	u64 bl_lowlevel_duration;
 
 	/* persistence mode on/off */
 	bool persist_mode;
@@ -943,6 +955,9 @@ struct mdss_panel_info {
 
 	/* check brightness notify enabled*/
 	bool bl_notify_enabled;
+
+	/* check disable cabc by panel off*/
+	bool disable_cabc;
 };
 
 struct mdss_panel_timing {
@@ -1013,6 +1028,9 @@ struct mdss_panel_data {
 	 * are still on; panel will recover after unblank
 	 */
 	bool panel_disable_mode;
+
+	int panel_te_gpio;
+	struct completion te_done;
 };
 
 struct mdss_panel_debugfs_info {

@@ -1,5 +1,5 @@
-/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+/* Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,7 +29,7 @@ struct sensor_eeprom_name_t {
 };
 
 struct sensor_eeprom_name_t sensor_eeprom_name[3];
-uint8_t eeprom_name_count = 0;
+uint8_t eeprom_name_count;
 
 
 DEFINE_MSM_MUTEX(msm_eeprom_mutex);
@@ -214,6 +214,7 @@ static int read_eeprom_memory(struct msm_eeprom_ctrl_t *e_ctrl,
 				return rc;
 			}
 		}
+
 		if (emap[j].mem.valid_size) {
 			e_ctrl->i2c_client.addr_type = emap[j].mem.addr_t;
 			rc = e_ctrl->i2c_client.i2c_func_tbl->i2c_read_seq(
@@ -1281,6 +1282,11 @@ static int msm_eeprom_spi_remove(struct spi_device *sdev)
 		return 0;
 	}
 
+	if (!e_ctrl->eboard_info) {
+		pr_err("%s: board info is NULL\n", __func__);
+		return 0;
+	}
+
 	msm_camera_i2c_dev_put_clk_info(
 		&e_ctrl->i2c_client.spi_client->spi_master->dev,
 		&e_ctrl->eboard_info->power_info.clk_info,
@@ -1598,6 +1604,7 @@ void get_eeprom_name(uint8_t index, char *name)
 EXPORT_SYMBOL(get_eeprom_name);
 EXPORT_SYMBOL(eeprom_name_count);
 
+/* compatible eeprom map for sagit P3 & P2 */
 int get_back_sensor_module_invalid(void)
 {
 	if (back_sensor_module_invalid) {
@@ -1624,6 +1631,7 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 	struct msm_eeprom_board_info *eb_info = NULL;
 	struct device_node *of_node = pdev->dev.of_node;
 	struct msm_camera_power_ctrl_t *power_info = NULL;
+
 
 	CDBG("%s E\n", __func__);
 
@@ -1710,9 +1718,11 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 		pr_err("%s failed %d\n", __func__, __LINE__);
 		e_ctrl->userspace_probe = 1;
 	}
+
 	rc = msm_eeprom_get_dt_data(e_ctrl);
 	if (rc < 0)
 		goto board_free;
+
 	if (e_ctrl->userspace_probe == 0) {
 		rc = of_property_read_u32(of_node, "qcom,slave-addr",
 			&temp);
@@ -1846,6 +1856,7 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 		}
 	} else
 		e_ctrl->is_supported = 1;
+
 	v4l2_subdev_init(&e_ctrl->msm_sd.sd,
 		e_ctrl->eeprom_v4l2_subdev_ops);
 	v4l2_set_subdevdata(&e_ctrl->msm_sd.sd, e_ctrl);
@@ -1858,6 +1869,7 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 	e_ctrl->msm_sd.sd.entity.type = MEDIA_ENT_T_V4L2_SUBDEV;
 	e_ctrl->msm_sd.sd.entity.group_id = MSM_CAMERA_SUBDEV_EEPROM;
 	msm_sd_register(&e_ctrl->msm_sd);
+
 #ifdef CONFIG_COMPAT
 	msm_cam_copy_v4l2_subdev_fops(&msm_eeprom_v4l2_subdev_fops);
 	msm_eeprom_v4l2_subdev_fops.compat_ioctl32 =
@@ -1900,6 +1912,11 @@ static int msm_eeprom_platform_remove(struct platform_device *pdev)
 	e_ctrl = (struct msm_eeprom_ctrl_t *)v4l2_get_subdevdata(sd);
 	if (!e_ctrl) {
 		pr_err("%s: eeprom device is NULL\n", __func__);
+		return 0;
+	}
+
+	if (!e_ctrl->eboard_info) {
+		pr_err("%s: board info is NULL\n", __func__);
 		return 0;
 	}
 

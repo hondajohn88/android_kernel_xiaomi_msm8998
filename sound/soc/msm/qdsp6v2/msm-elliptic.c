@@ -141,8 +141,6 @@ static const struct soc_enum elliptic_enum[] = {
 int get_elliptic_calibration_data(uint8_t *caldata, uint32_t max_size)
 {
 	uint32_t copied = ELLIPTIC_CALIBRATION_DATA_SIZE;
-    
-    EL_PRINT_I("Get elliptic calibration data");
 
 	if (max_size < ELLIPTIC_CALIBRATION_DATA_SIZE) {
 		copied = max_size;
@@ -161,7 +159,6 @@ static uint32_t ultrasound_enable_cache;
 int msm_routing_get_ultrasound_enable(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
 {
-    EL_PRINT_I("Get enable");
 	ucontrol->value.integer.value[0] = ultrasound_enable_cache;
 	return 0;
 }
@@ -170,8 +167,6 @@ int msm_routing_set_ultrasound_enable(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
 {
 	int32_t ret = 0;
-    
-    EL_PRINT_I("Set enable");
 
 	ultrasound_enable_cache = ucontrol->value.integer.value[0];
 
@@ -186,7 +181,6 @@ int msm_routing_get_ultrasound_rampdown(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	/* Rampdown is a strobe, so always return Off */
-    EL_PRINT_I("Get Rampdown");
 	ucontrol->value.integer.value[0] = 0;
 	return 0;
 }
@@ -196,8 +190,6 @@ int msm_routing_set_ultrasound_rampdown(struct snd_kcontrol *kcontrol,
 {
 	int32_t ret = 0;
 	uint32_t filter_set = ELLIPTIC_ULTRASOUND_RAMP_DOWN;
-    
-    EL_PRINT_I("Set Rampdown");
 
 	if (ucontrol->value.integer.value[0] == 0)
 		return 0;
@@ -212,7 +204,6 @@ int msm_routing_set_ultrasound_rampdown(struct snd_kcontrol *kcontrol,
 int elliptic_system_configuration_get(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
 {
-    EL_PRINT_I("Get system config");
 	memcpy(ucontrol->value.bytes.data, &elliptic_system_configuration,
 		   ELLIPTIC_SYSTEM_CONFIGURATION_SIZE);
 	return 0;
@@ -222,8 +213,6 @@ int elliptic_system_configuration_put(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
 {
 	int32_t param_id = ELLIPTIC_ULTRASOUND_SET_PARAMS;
-    
-    EL_PRINT_I("Put system config");
 
 	memcpy(&elliptic_system_configuration, ucontrol->value.bytes.data,
 		   ELLIPTIC_SYSTEM_CONFIGURATION_SIZE);
@@ -236,7 +225,6 @@ int elliptic_system_configuration_put(struct snd_kcontrol *kcontrol,
 int elliptic_calibration_data_get(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
-    EL_PRINT_I("Elliptic calibration data get");
 	memcpy(ucontrol->value.bytes.data,
 		&elliptic_engine_calibration_data_cache,
 		ELLIPTIC_CALIBRATION_DATA_SIZE);
@@ -247,8 +235,6 @@ int elliptic_calibration_data_put(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
 	int32_t param_id = ELLIPTIC_ULTRASOUND_SET_PARAMS;
-    
-    EL_PRINT_I("Elliptic calibration data put");
 
 	memcpy(&elliptic_engine_calibration_data_cache,
 		ucontrol->value.bytes.data, ELLIPTIC_CALIBRATION_DATA_SIZE);
@@ -293,8 +279,6 @@ int elliptic_calibration_param_get(
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-        
-    EL_PRINT_I("Get calibration param");
 
 	pr_err("%s: reg: %d shift: %d\n", __func__, mc->reg, mc->shift);
 
@@ -303,19 +287,16 @@ int elliptic_calibration_param_get(
 
 	switch (mc->shift) {
 	case ELLIPTIC_CALIBRATION_STATE:
-        EL_PRINT_I("Param: State");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.calibration_state;
 		break;
 
 	case ELLIPTIC_CALIBRATION_PROFILE:
-        EL_PRINT_I("Param: Profile");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.calibration_profile;
 		break;
 
 	case ELLIPTIC_ULTRASOUND_GAIN:
-        EL_PRINT_I("Param: Ultrasound Gain");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.ultrasound_gain;
 		break;
@@ -335,8 +316,6 @@ int elliptic_calibration_param_put(
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct elliptic_system_configuration_parameter param;
 	uint32_t param_id = ELLIPTIC_ULTRASOUND_SET_PARAMS;
-    
-    EL_PRINT_I("Put calibration param");
 
 	if (mc->reg != ELLIPTIC_CALIBRATION)
 		return -EINVAL;
@@ -382,8 +361,6 @@ int elliptic_system_configuration_param_get(
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-        
-    EL_PRINT_I("Get sysconfig param");
 
 	pr_err("%s: reg: %d shift: %d\n", __func__, mc->reg, mc->shift);
 
@@ -392,19 +369,16 @@ int elliptic_system_configuration_param_get(
 
 	switch (mc->shift) {
 	case ELLIPTIC_SYSTEM_CONFIGURATION_LATENCY:
-        EL_PRINT_I("Param: Latency");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.latency;
 		break;
 
 	case ELLIPTIC_SYSTEM_CONFIGURATION_SENSITIVITY:
-        EL_PRINT_I("Param: Sensitivity");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.sensitivity;
 		break;
 
 	case ELLIPTIC_SYSTEM_CONFIGURATION_SPEAKER_SCALING:
-        EL_PRINT_I("Param: Speaker scaling");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.speaker_scaling[0];
 		ucontrol->value.integer.value[1] =
@@ -412,25 +386,21 @@ int elliptic_system_configuration_param_get(
 		break;
 
 	case ELLIPTIC_SYSTEM_CONFIGURATION_MICROPHONE_INDEX:
-        EL_PRINT_I("Param: Mic index");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.microphone_index;
 		break;
 
 	case ELLIPTIC_SYSTEM_CONFIGURATION_OPERATION_MODE:
-        EL_PRINT_I("Param: Operation mode");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.operation_mode;
 		break;
 
 	case ELLIPTIC_SYSTEM_CONFIGURATION_OPERATION_MODE_FLAGS:
-        EL_PRINT_I("Param: Mode flags");
 		ucontrol->value.integer.value[0] =
 		elliptic_system_configuration_cache.operation_mode_flags;
 		break;
 
 	case ELLIPTIC_SYSTEM_CONFIGURATION_LOG_LEVEL:
-        EL_PRINT_I("Param: Log level");
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.log_level;
 		break;
@@ -452,8 +422,6 @@ int elliptic_system_configuration_param_put(
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct elliptic_system_configuration_parameter param;
 	uint32_t param_id = ELLIPTIC_ULTRASOUND_SET_PARAMS;
-    
-    EL_PRINT_I("Put sysconfig param");
 
 	if (mc->reg != ELLIPTIC_SYSTEM_CONFIGURATION)
 		return -EINVAL;
@@ -631,8 +599,6 @@ unsigned int elliptic_add_platform_controls(void *platform)
 {
 	const unsigned int num_controls =
 		ARRAY_SIZE(ultrasound_filter_mixer_controls);
-        
-    EL_PRINT_I("Add platform controls: %d controls", num_controls);
 
 	if (platform != NULL) {
 		snd_soc_add_platform_controls(

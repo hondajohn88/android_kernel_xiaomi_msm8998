@@ -2,7 +2,7 @@
  *  linux/kernel/printk.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
- *  Copyright (C) 2017 XiaoMi, Inc.
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *
  * Modified to make sys_syslog() more flexible: added commands to
  * return the last 4k of kernel messages, regardless of whether
@@ -1441,7 +1441,7 @@ static void call_console_drivers(int level,
 {
 	struct console *con;
 
-	trace_console(text, len);
+	trace_console_rcuidle(text, len);
 
 	if (level >= console_loglevel && !ignore_loglevel)
 		return;

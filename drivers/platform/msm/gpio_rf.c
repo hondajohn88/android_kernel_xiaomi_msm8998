@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2017 XiaoMi, Inc.
- */
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>

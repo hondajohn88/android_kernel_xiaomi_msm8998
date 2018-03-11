@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1999-2002 Vojtech Pavlik
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -39,17 +39,23 @@ struct input_value {
 
 #ifdef CONFIG_LAST_TOUCH_EVENTS
 #define TOUCH_EVENT_MAX 512
+#define TOUCH_MAX_FINGER 10
+enum {
+	TOUCH_IS_INIT	=	0,
+	TOUCH_IS_PRESSED,
+	TOUCH_IS_RELEASED,
+};
 struct touch_event {
-	struct timespec press_time_stamp;
-	struct timespec release_time_stamp;
-	__s32 press_pos_x;
-	__s32 press_pos_y;
-	__s32 release_pos_x;
-	__s32 release_pos_y;
+	struct timespec touch_time_stamp;
+	u32 touch_state;
+	__s32 finger_num;
 };
 
 struct touch_event_info {
 	u32 touch_event_num;
+	u32 touch_slot;
+	u32 finger_bitmap;
+	bool touch_is_pressed;
 	struct touch_event touch_event_buf[TOUCH_EVENT_MAX];
 };
 #endif
@@ -206,8 +212,6 @@ struct input_dev {
 
 	bool devres_managed;
 #ifdef CONFIG_LAST_TOUCH_EVENTS
-	bool touch_is_pressed;
-	struct touch_event latest_touch_event;
 	struct touch_event_info *touch_events;
 #endif
 };

@@ -4,7 +4,7 @@
 * Rule        : Use TAB 4
 *
 * Copyright(c) Rohm Co.,Ltd. All rights reserved
-* Copyright (C) 2017 XiaoMi, Inc.
+* Copyright (C) 2018 XiaoMi, Inc.
 ****************************************************************************/
 /***** ROHM Confidential ***************************************************/
 
@@ -222,9 +222,9 @@ _P_0F)
 #define _P_13_I2C_MONSEL	0x13
 #define _P_14_I2C_OFSREG	0x14
 #if 0
-//  _P_15)
-//  _P_16)
-//  _P_17)
+
+
+
 #endif
 #define _P_18_SPI_TRSNUM	0x18
 #define _P_19_SPI_CONTRL	0x19
@@ -234,11 +234,11 @@ _P_0F)
 #define _P_1A_SPI_D_HHHL	0x1B
 #define _P_1B_SPI_D_LHLL	0x1C
 #if 0
-//  _P_1B)
-//  _P_1C)
-//  _P_1D)
-//  _P_1E)
-//  _P_1F)
+
+
+
+
+
 #endif
 #define _P_20_MSC_MONCTL1	0x20
 #define _P_21_MSC_MONCTL2	0x21
@@ -272,28 +272,28 @@ _P_0F)
 #define _P_3C_ADC_GAIN	0x3C
 #define _P_3D_ADC_CTL	0x3D
 #if 0
-//  _P_3E)
-//  _P_3F)
+
+
 #endif
 #define _P_40_OUT_CH	0x40
 #define _P_41_OUT_CTL	0x41
 #define _P_42_OUT_DAC	0x42
 #define _P_43_OUT_SW	0x43
 #if 0
-//  _P_44)
-//  _P_45)
-//  _P_46)
-//  _P_47)
+
+
+
+
 #endif
 #define _P_48_TOP_00	0x48
 #if 0
-//  _P_49)
-//  _P_4A)
-//  _P_4B)
-//  _P_4C)
-//  _P_4D)
-//  _P_4E)
-//  _P_4F)
+
+
+
+
+
+
+
 #endif
 #define _P_50_TST_TSTCMD	0x50
 #define _P_51_TST_AF_SLP	0x51
@@ -307,10 +307,10 @@ _P_0F)
 #define _P_59_TST_SMPPWR	0x59
 #define _P_5A_TST_MPXFIX	0x5A
 #if 0
-//  _P_5B_)		,0x5B
-//  _P_5C_)		,0x5C
-//  _P_5D_)		,0x5D
-//  _P_5E_)		,0x5E
+
+
+
+
 #endif
 #define _P_5F_TST_INFVER	0x5F
 
@@ -440,7 +440,7 @@ _P_0F)
 #endif
 #define _M_KgxH0	0x70  /* RHM_HT 2013/11/25 Modified */
 #define _M_X_PEO	0x71
-#define _M_KgyH0	0x72  // RHM_HT 2013/11/25 Modified
+#define _M_KgyH0	0x72
 #define _M_Y_PEO	0x73
 #define _M_FOC_CNTRL	0x74
 /* #define _M_rsv	0x75 */

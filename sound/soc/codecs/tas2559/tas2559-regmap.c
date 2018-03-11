@@ -1,7 +1,7 @@
 /*
 ** =============================================================================
 ** Copyright (c) 2016  Texas Instruments Inc.
-** Copyright (C) 2017 XiaoMi, Inc.
+** Copyright (C) 2018 XiaoMi, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify it under
 ** the terms of the GNU General Public License as published by the Free Software
@@ -615,6 +615,9 @@ static void irq_work_routine(struct work_struct *work)
 		goto end;
 	}
 
+	if (pTAS2559->mnErrCode & ERROR_FAILSAFE)
+		goto program;
+
 	if (!pTAS2559->mbPowerUp) {
 		dev_info(pTAS2559->dev, "%s, device not powered\n", __func__);
 		goto end;
@@ -1116,6 +1119,7 @@ static int tas2559_i2c_probe(struct i2c_client *pClient,
 	pTAS2559->hw_reset = tas2559_hw_reset;
 	pTAS2559->runtime_suspend = tas2559_runtime_suspend;
 	pTAS2559->runtime_resume = tas2559_runtime_resume;
+	pTAS2559->mnRestart = 0;
 
 	mutex_init(&pTAS2559->dev_lock);
 

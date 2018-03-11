@@ -6,7 +6,7 @@
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
  * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/proc_fs.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
@@ -155,12 +154,6 @@ static ssize_t synaptics_rmi4_0dbutton_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
 static irqreturn_t synaptics_rmi4_irq(int irq, void *data);
-
-static ssize_t synaptics_rmi4_reversed_keys_show(struct device *dev,
-		struct device_attribute *attr, char *buf);
-
-static ssize_t synaptics_rmi4_reversed_keys_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count);
 
 #if defined(CONFIG_SECURE_TOUCH)
 static ssize_t synaptics_secure_touch_enable_show(struct device *dev,
@@ -412,12 +405,6 @@ static struct device_attribute attrs[] = {
 			synaptics_secure_touch_show,
 			NULL),
 #endif
-	__ATTR(reversed_keys, (S_IRUGO | S_IWUSR),
-			synaptics_rmi4_reversed_keys_show,
-			synaptics_rmi4_reversed_keys_store),
-	__ATTR(suspend, S_IWUSR,
-			synaptics_rmi4_show_error,
-			synaptics_rmi4_suspend_store),
 };
 
 #define MAX_BUF_SIZE	256
@@ -880,90 +867,6 @@ static ssize_t synaptics_rmi4_0dbutton_store(struct device *dev,
 	return count;
 }
 
-static ssize_t synaptics_rmi4_reversed_keys_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
-
-	return snprintf(buf, PAGE_SIZE, "%u\n",
-			rmi4_data->enable_reversed_keys);
-}
-
-static ssize_t synaptics_rmi4_reversed_keys_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int input;
-	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
-
-	if (sscanf(buf, "%u", &input) != 1)
-		return -EINVAL;
-
-	input = input > 0 ? 1 : 0;
-
-	if (rmi4_data->enable_reversed_keys == input)
-		return count;
-
-	rmi4_data->enable_reversed_keys = input;
-
-	return count;
-}
-
-static int synaptics_rmi4_proc_init(struct kernfs_node *sysfs_node_parent)
-{
-	int ret = 0;
-	char *buf, *path = NULL;
-	char *double_tap_sysfs_node, *key_disabler_sysfs_node;
-	struct proc_dir_entry *proc_entry_tp = NULL;
-	struct proc_dir_entry *proc_symlink_tmp  = NULL;
-
-	buf = kzalloc(PATH_MAX, GFP_KERNEL);
-	if (buf)
-		path = kernfs_path(sysfs_node_parent, buf, PATH_MAX);
-
-	proc_entry_tp = proc_mkdir("touchpanel", NULL);
-	if (proc_entry_tp == NULL) {
-		ret = -ENOMEM;
-		pr_err("%s: Couldn't create touchpanel\n", __func__);
-	}
-
-	double_tap_sysfs_node = kzalloc(PATH_MAX, GFP_KERNEL);
-	if (double_tap_sysfs_node)
-		sprintf(double_tap_sysfs_node, "/sys%s/%s", path, "wake_gesture");
-	proc_symlink_tmp = proc_symlink("double_tap_enable",
-			proc_entry_tp, double_tap_sysfs_node);
-	if (proc_symlink_tmp == NULL) {
-		ret = -ENOMEM;
-		pr_err("%s: Couldn't create double_tap_enable symlink\n", __func__);
-	}
-
-	key_disabler_sysfs_node = kzalloc(PATH_MAX, GFP_KERNEL);
-	if (key_disabler_sysfs_node)
-		sprintf(key_disabler_sysfs_node, "/sys%s/%s", path, "0dbutton");
-	proc_symlink_tmp = proc_symlink("capacitive_keys_enable",
-			proc_entry_tp, key_disabler_sysfs_node);
-	if (proc_symlink_tmp == NULL) {
-		ret = -ENOMEM;
-		pr_err("%s: Couldn't create capacitive_keys_enable symlink\n", __func__);
-	}
-
-	swap_keys_sysfs_node = kzalloc(PATH_MAX, GFP_KERNEL);
-	if (swap_keys_sysfs_node)
-		sprintf(swap_keys_sysfs_node, "/sys%s/%s", path, "reversed_keys");
-	proc_symlink_tmp = proc_symlink("reversed_keys_enable",
-			proc_entry_tp, swap_keys_sysfs_node);
-	if (proc_symlink_tmp == NULL) {
-		ret = -ENOMEM;
-		pr_err("%s: Couldn't create reversed_keys_enable symlink\n", __func__);
-	}
-
-	kfree(buf);
-	kfree(double_tap_sysfs_node);
-	kfree(key_disabler_sysfs_node);
-	kfree(swap_keys_sysfs_node);
-
-	return ret;
-}
-
  /**
  * synaptics_rmi4_f11_abs_report()
  *
@@ -1294,19 +1197,6 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	return touch_count;
 }
 
-static void synaptics_rmi4_report_key(struct synaptics_rmi4_data *rmi4_data,
-		int key, int status)
-{
-	if (key == KEY_MENU)
-		input_report_key(rmi4_data->input_dev,
-				rmi4_data->enable_reversed_keys ? KEY_MENU : KEY_BACK, status);
-	else if (key == KEY_BACK)
-		input_report_key(rmi4_data->input_dev,
-				rmi4_data->enable_reversed_keys ? KEY_BACK : KEY_MENU, status);
-	else
-		input_report_key(rmi4_data->input_dev, key, status);
-}
-
 static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 		struct synaptics_rmi4_fn *fhandler)
 {
@@ -1376,12 +1266,16 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 				}
 			}
 			touch_count++;
-			synaptics_rmi4_report_key(rmi4_data, f1a->button_map[button], status);
+			input_report_key(rmi4_data->input_dev,
+					f1a->button_map[button],
+					status);
 		} else {
 			if (before_2d_status[button] == 1) {
 				before_2d_status[button] = 0;
 				touch_count++;
-				synaptics_rmi4_report_key(rmi4_data, f1a->button_map[button], status);
+				input_report_key(rmi4_data->input_dev,
+						f1a->button_map[button],
+						status);
 			} else {
 				if (status == 1)
 					while_2d_status[button] = 1;
@@ -1391,7 +1285,9 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 		}
 #else
 		touch_count++;
-		synaptics_rmi4_report_key(rmi4_data, f1a->button_map[button], status);
+		input_report_key(rmi4_data->input_dev,
+				f1a->button_map[button],
+				status);
 #endif
 	}
 
@@ -1600,7 +1496,7 @@ static int synaptics_rmi4_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 	return retval;
 }
 
-static int synaptics_rmi4_set_intr_mask(struct synaptics_rmi4_fn *fhandler,
+static void synaptics_rmi4_set_intr_mask(struct synaptics_rmi4_fn *fhandler,
 		struct synaptics_rmi4_fn_desc *fd,
 		unsigned int intr_count)
 {
@@ -1608,12 +1504,6 @@ static int synaptics_rmi4_set_intr_mask(struct synaptics_rmi4_fn *fhandler,
 	unsigned char intr_offset;
 
 	fhandler->intr_reg_num = (intr_count + 7) / 8;
-	if (fhandler->intr_reg_num >= MAX_INTR_REGISTERS) {
-		fhandler->intr_reg_num = 0;
-		fhandler->num_of_data_sources = 0;
-		fhandler->intr_mask = 0;
-		return -EINVAL;
-	}
 	if (fhandler->intr_reg_num != 0)
 		fhandler->intr_reg_num -= 1;
 
@@ -1626,7 +1516,7 @@ static int synaptics_rmi4_set_intr_mask(struct synaptics_rmi4_fn *fhandler,
 			ii++)
 		fhandler->intr_mask |= 1 << ii;
 
-	return 0;
+	return;
 }
 
 static int synaptics_rmi4_f01_init(struct synaptics_rmi4_data *rmi4_data,
@@ -1634,17 +1524,12 @@ static int synaptics_rmi4_f01_init(struct synaptics_rmi4_data *rmi4_data,
 		struct synaptics_rmi4_fn_desc *fd,
 		unsigned int intr_count)
 {
-	int retval;
-
 	fhandler->fn_number = fd->fn_number;
 	fhandler->num_of_data_sources = fd->intr_src_count;
 	fhandler->data = NULL;
 	fhandler->extra = NULL;
 
-	retval = synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
-	if (retval < 0)
-		return retval;
-
+	synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
 
 	rmi4_data->f01_query_base_addr = fd->query_base_addr;
 	rmi4_data->f01_ctrl_base_addr = fd->ctrl_base_addr;
@@ -1769,9 +1654,7 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 	if (retval < 0)
 		return retval;
 
-	retval = synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
-	if (retval < 0)
-		return retval;
+	synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
 
 	abs_data_size = query[5] & MASK_2BIT;
 	abs_data_blk_size = 3 + (2 * (abs_data_size == 0 ? 1 : 0));
@@ -2052,9 +1935,7 @@ static int synaptics_rmi4_f12_init(struct synaptics_rmi4_data *rmi4_data,
 	if (retval < 0)
 		goto free_function_handler_mem;
 
-	retval = synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
-	if (retval < 0)
-		return retval;
+	synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
 
 	/* Allocate memory for finger data storage space */
 	fhandler->data_size = num_of_fingers * size_of_2d_data;
@@ -2212,9 +2093,7 @@ static int synaptics_rmi4_f1a_init(struct synaptics_rmi4_data *rmi4_data,
 	fhandler->fn_number = fd->fn_number;
 	fhandler->num_of_data_sources = fd->intr_src_count;
 
-	retval = synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
-	if (retval < 0)
-		return retval;
+	synaptics_rmi4_set_intr_mask(fhandler, fd, intr_count);
 
 	retval = synaptics_rmi4_f1a_alloc_mem(rmi4_data, fhandler);
 	if (retval < 0)
@@ -2613,8 +2492,6 @@ flash_prog_mode:
 	dev_dbg(rmi4_data->pdev->dev.parent,
 			"%s: Number of interrupt registers = %d\n",
 			__func__, rmi4_data->num_of_intr_regs);
-	if (rmi4_data->num_of_intr_regs >= MAX_INTR_REGISTERS)
-		return -EINVAL;
 
 	retval = synaptics_rmi4_reg_read(rmi4_data,
 			rmi4_data->f01_query_base_addr,
@@ -3949,8 +3826,6 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 			goto err_sysfs;
 		}
 	}
-
-    synaptics_rmi4_proc_init(rmi4_data->input_dev->dev.kobj.sd);
 
 	synaptics_secure_touch_init(rmi4_data);
 	synaptics_secure_touch_stop(rmi4_data, 1);

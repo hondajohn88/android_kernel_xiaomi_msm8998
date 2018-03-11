@@ -1,5 +1,5 @@
 /* Copyright (c) 2016, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -233,13 +233,13 @@
 			synaptics,chip-id = <0>;
 			synaptics,chip-id-name = "S3330";
 			synaptics,tp-id = /bits/ 8 <0x31>;
-			synaptics,fw-name = "synaptics_jdi_3330_chiron.fw";
+			synaptics,fw-name = "synaptics_jdi_3330_d5.fw";
 		};
 		synaptics,cfg_2 {
 			synaptics,chip-id = <1>;
 			synaptics,chip-id-name = "S3331";
 			synaptics,tp-id = /bits/ 8 <0x31>;
-			//synaptics,fw-name = "synaptics_jdi_3331_sagit.fw";
+			//synaptics,fw-name = "synaptics_jdi_3331_c1.fw";
 		};
 		synaptics,cfg_3 {
 			synaptics,chip-id = <2>;
@@ -258,7 +258,7 @@
 			synaptics,ibb-pre-off-sleep = <10>;
 			synaptics,ibb-post-off-sleep = <0>;
 			synaptics,tp-id = /bits/ 8 <0x34>;
-			//synaptics,fw-name = "synaptics_lgd_4322_sagit.fw";
+			//synaptics,fw-name = "synaptics_lgd_4322_c1.fw";
 		};
 	};
 	ft5x46_i2c@38 {
@@ -303,7 +303,7 @@
 			ft5x46_i2c,vendor = <0x32>;
 			ft5x46_i2c,tp-vendor = <0x41>;
 			ft5x46_i2c,lcd-vendor = <0x37>;
-			ft5x46_i2c,fw-name = "ft8716_ebbg_incell_ebbg_chiron.fw";
+			ft5x46_i2c,fw-name = "ft8716_ebbg_incell_ebbg_d5.fw";
 			ft5x46_i2c,tx-num = <24>;
 			ft5x46_i2c,rx-num = <13>;
 		};
@@ -709,7 +709,6 @@
 		compatible = "ti,tas2559";
 		reg = <0x4c>;
 		ti,tas2559-reset-gpio = <&tlmm 41 0>;
-		/*ti,tas2560-reset-gpio = <&tlmm 41 0>;*/
 		ti,tas2559-irq-gpio = <&tlmm 42 0>;
 		ti,tas2560-irq-gpio = <&tlmm 11 0>;
 		ti,tas2559-addr = <0x4c>;
@@ -835,8 +834,6 @@
 		fpc,gpio_rst    = <&tlmm 78 0x0>;
 		fpc,gpio_irq    = <&tlmm 121 0x0>;
 		vdd_ana-supply  = <&fp_d5_vdd_vreg>;
-		/* fpc,enable-on-boot; */
-		/* fpc,enable-wakeup; */
 
 		pinctrl-names = "fpc1020_reset_reset",
 			"fpc1020_reset_active",
@@ -882,10 +879,10 @@
 	qcom,idx-len = <18>;
 	qcom,duty-pcts = [00 01 02 03 04 05 06 07 08
 			08 07 06 05 04 03 02 01 00];
-	qcom,lut-flags = <3>;
-	qcom,pause-lo = <0>;
-	qcom,pause-hi = <0>;
-	qcom,ramp-step-ms = <142>;
+	qcom,lut-flags = <31>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
+	qcom,ramp-step-ms = <50>;
 	qcom,use-blink;
 	linux,name = "white";
 };
@@ -906,6 +903,14 @@
 	qcom,fcc-hot-temp-delta = <1650000>;
 	qcom,fcc-cool-temp-delta = <2325000>;
 	qcom,auto-recharge-soc;
+	qcom,thermal-mitigation
+				= <1800000 1600000 1400000 1200000 1000000 1000000 1000000>;
+	qcom,thermal-mitigation-dcp
+				= <1800000 1600000 1400000 1200000 1000000 1000000 1000000>;
+	qcom,thermal-mitigation-qc3
+				= <3000000 2425000 2125000 1825000 1525000 1225000 750000>;
+	qcom,thermal-mitigation-qc2
+				= <1600000 1400000 1200000 1000000 900000 900000 550000>;
 };
 &pmi8998_fg {
 	qcom,fg-force-load-profile;
@@ -923,8 +928,8 @@
 /{
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "batterydata-chiron-atl-3400mAh.dtsi"
-		#include "batterydata-chiron-cos-3400mAh.dtsi"
+		#include "batterydata-d5-atl-3400mAh.dtsi"
+		#include "batterydata-d5-cos-3400mAh.dtsi"
 		#include "batterydata-itech-3020mAh.dtsi"
 	};
 };
@@ -940,4 +945,14 @@
 				0x0a 0x184
 				0xf0 0x23c
 				0x0f 0x240>;
+};
+
+/* Blue led was used for powersupply of left button key backlight */
+&blue_led {
+	linux,name = "button-backlight";
+};
+
+/* Green led was used for powersupply of right button key backlight */
+&green_led {
+	linux,name = "button-backlight1";
 };

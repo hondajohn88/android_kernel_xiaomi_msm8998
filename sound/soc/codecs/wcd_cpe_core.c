@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -334,6 +334,14 @@ static int wcd_cpe_load_each_segment(struct wcd_cpe_core *core,
 	else {
 		dev_err(core->dev, "%s invalid flags 0x%x\n",
 			__func__, phdr->p_flags);
+		goto done;
+	}
+
+	if (phdr->p_filesz != split_fw->size) {
+		dev_err(core->dev,
+			"%s: %s size mismatch, phdr_size: 0x%x fw_size: 0x%zx",
+			__func__, split_fname, phdr->p_filesz, split_fw->size);
+		ret = -EINVAL;
 		goto done;
 	}
 
@@ -1731,10 +1739,10 @@ static ssize_t fw_name_store(struct wcd_cpe_core *core,
 	if (pos)
 		copy_count = pos - buf;
 
-	if (copy_count > WCD_CPE_IMAGE_FNAME_MAX) {
+	if (copy_count > (WCD_CPE_IMAGE_FNAME_MAX - 1)) {
 		dev_err(core->dev,
 			"%s: Invalid length %d, max allowed %d\n",
-			__func__, copy_count, WCD_CPE_IMAGE_FNAME_MAX);
+			__func__, copy_count, WCD_CPE_IMAGE_FNAME_MAX - 1);
 		return -EINVAL;
 	}
 
@@ -3555,6 +3563,8 @@ static int wcd_cpe_lsm_lab_control(
 
 	pr_debug("%s: enter payload_size = %d Enable %d\n",
 		 __func__, pld_size, enable);
+
+	memset(&cpe_lab_enable, 0, sizeof(cpe_lab_enable));
 
 	if (fill_lsm_cmd_header_v0_inband(&cpe_lab_enable.hdr, session->id,
 		(u8) pld_size, CPE_LSM_SESSION_CMD_SET_PARAMS_V2)) {

@@ -3,8 +3,8 @@
  *
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -432,7 +432,7 @@ struct ufs_clk_gating {
 	struct device_attribute enable_attr;
 	bool is_enabled;
 	int active_reqs;
-	struct workqueue_struct *ungating_workq;
+	struct workqueue_struct *clk_gating_workq;
 };
 
 /* Hibern8 state  */
@@ -520,7 +520,7 @@ struct ufs_init_prefetch {
 	u32 icc_level;
 };
 
-#define UIC_ERR_REG_HIST_LENGTH 8
+#define UIC_ERR_REG_HIST_LENGTH 20
 /**
  * struct ufs_uic_err_reg_hist - keeps history of uic errors
  * @pos: index to indicate cyclic buffer position
@@ -592,6 +592,22 @@ struct ufshcd_req_stat {
 };
 #endif
 
+enum ufshcd_ctx {
+	QUEUE_CMD,
+	ERR_HNDLR_WORK,
+	H8_EXIT_WORK,
+	UIC_CMD_SEND,
+	PWRCTL_CMD_SEND,
+	TM_CMD_SEND,
+	XFR_REQ_COMPL,
+	CLK_SCALE_WORK,
+};
+
+struct ufshcd_clk_ctx {
+	ktime_t ts;
+	enum ufshcd_ctx ctx;
+};
+
 /**
  * struct ufs_stats - keeps usage/err statistics
  * @enabled: enable tag stats for debugfs
@@ -620,8 +636,13 @@ struct ufs_stats {
 	int query_stats_arr[UPIU_QUERY_OPCODE_MAX][MAX_QUERY_IDN];
 
 #endif
+	u32 last_intr_status;
+	ktime_t last_intr_ts;
+	struct ufshcd_clk_ctx clk_hold;
+	struct ufshcd_clk_ctx clk_rel;
 	u32 hibern8_exit_cnt;
 	ktime_t last_hibern8_exit_tstamp;
+	u32 power_mode_change_cnt;
 	struct ufs_uic_err_reg_hist pa_err;
 	struct ufs_uic_err_reg_hist dl_err;
 	struct ufs_uic_err_reg_hist nl_err;
@@ -644,6 +665,27 @@ struct ufs_stats {
 		 UFSHCD_DBG_PRINT_HOST_REGS_EN | UFSHCD_DBG_PRINT_TRS_EN | \
 		 UFSHCD_DBG_PRINT_TMRS_EN | UFSHCD_DBG_PRINT_PWR_EN |	   \
 		 UFSHCD_DBG_PRINT_HOST_STATE_EN)
+
+struct ufshcd_cmd_log_entry {
+	char *str;	/* context like "send", "complete" */
+	char *cmd_type;	/* "scsi", "query", "nop", "dme" */
+	u8 lun;
+	u8 cmd_id;
+	sector_t lba;
+	int transfer_len;
+	u8 idn;		/* used only for query idn */
+	u32 doorbell;
+	u32 outstanding_reqs;
+	u32 seq_num;
+	unsigned int tag;
+	ktime_t tstamp;
+};
+
+struct ufshcd_cmd_log {
+	struct ufshcd_cmd_log_entry *entries;
+	int pos;
+	u32 seq_num;
+};
 
 /**
  * struct ufs_hba - per adapter private structure
@@ -860,6 +902,7 @@ struct ufs_hba {
 
 	struct ufs_clk_gating clk_gating;
 	struct ufs_hibern8_on_idle hibern8_on_idle;
+	struct ufshcd_cmd_log cmd_log;
 
 	/* Control to enable/disable host capabilities */
 	u32 caps;

@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -583,7 +583,7 @@
 				config {
 					pins = "gpio37";
 					drive-strength = <2>;
-					bias-pull-down;
+					bias-pull-up;
 				};
 			};
 
@@ -596,7 +596,7 @@
 				config {
 					pins = "gpio37";
 					drive-strength = <2>;
-					bias-disable;
+					bias-pull-up;
 				};
 			};
 		};
@@ -990,6 +990,86 @@
 			config {
 				pins = "gpio26", "gpio126";
 				bias-pull-down; /* PULL DOWN */
+				drive-strength = <2>; /* 2 MA */
+			};
+		};
+
+		cam_sensor_depth_default: cam_sensor_depth_default {
+			mux {
+				pins = "gpio28","gpio23","gpio7";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio28","gpio23","gpio7";
+				bias-disable; /* No PULL */
+				drive-strength = <2>; /* 2 MA */
+			};
+		};
+
+		cam_sensor_depth_sleep: cam_sensor_depth_sleep {
+			mux {
+				pins = "gpio28","gpio23","gpio7";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio28","gpio23","gpio7";
+				bias-disable; /* No PULL */
+				drive-strength = <2>; /* 2 MA */
+			};
+		};
+
+		cam_sensor_depth_v1_active: cam_sensor_depth_v1_active {
+			/* Depth VANA */
+			mux {
+				pins = "gpio24";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio24";
+				bias-disable; /* No PULL */
+				drive-strength = <2>; /* 2 MA */
+			};
+		};
+
+		cam_sensor_depth_v1_sleep: cam_sensor_depth_v1_sleep {
+			mux {
+				pins = "gpio24";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio24";
+				bias-disable; /* No PULL */
+				drive-strength = <2>; /* 2 MA */
+			};
+		};
+
+		cam_sensor_depth_v2_active: cam_sensor_depth_v2_active {
+			/* Depth CUSTOM2 */
+			mux {
+				pins = "gpio21";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio21";
+				bias-disable; /* No PULL */
+				drive-strength = <2>; /* 2 MA */
+			};
+		};
+
+		cam_sensor_depth_v2_sleep: cam_sensor_depth_v2_sleep {
+			mux {
+				pins = "gpio21";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio21";
+				bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
 			};
 		};
@@ -3285,10 +3365,12 @@
 				};
 			};
 		};
+
+		/* GPIO_37 : FP_RESET_N */
 		msm_gpio_37: msm_gpio_37 {
 			mux {
-				 pins = "gpio37";
-				 function = "gpio";
+				pins = "gpio37";
+				function = "gpio";
 			};
 
 			config {
@@ -3299,6 +3381,7 @@
 			};
 		};
 
+		/* GPIO_37 : FP_RESET_N, state device active*/
 		msm_gpio_37_output_high: msm_gpio_37_output_high {
 			mux {
 				pins = "gpio37";
@@ -3313,6 +3396,7 @@
 			};
 		};
 
+		/* GPIO_121 : FP_INT_N */
 		msm_gpio_121: msm_gpio_121 {
 			mux {
 				pins = "gpio121";
@@ -3326,10 +3410,11 @@
 			};
 		};
 
+		/* GPIO_78 : FP_RESET_N for chiron D5*/
 		msm_gpio_78: msm_gpio_78 {
 			mux {
-				 pins = "gpio78";
-				 function = "gpio";
+				pins = "gpio78";
+				function = "gpio";
 			};
 
 			config {
@@ -3340,6 +3425,7 @@
 			};
 		};
 
+		/* GPIO_78 : FP_RESET_N, state device active for chiron D5*/
 		msm_gpio_78_output_high: msm_gpio_78_output_high {
 			mux {
 				pins = "gpio78";
@@ -3404,31 +3490,6 @@
 					drive-strength = <8>;   /* 8 mA */
 					bias-disable;
 					output-high;
-				};
-			};
-		};
-
-		gpio_rf {
-			gpio_rf_active: gpio_rf_active {
-				mux {
-					pins = "gpio119";
-					function = "gpio";
-				};
-				config {
-					pins = "gpio119";
-					drive-strength = <2>;
-					bias-disable;
-				};
-			};
-			 gpio_rf_suspend: gpio_rf_suspend {
-				mux {
-					pins = "gpio119";
-					function = "gpio";
-				};
-				config {
-					pins = "gpio119";
-					drive-strength = <2>;
-					bias-disable;
 				};
 			};
 		};
@@ -3533,6 +3594,31 @@
 					drive-strength = <8>;
 					bias-pull-down;
 					input-enable;
+				};
+			};
+		};
+
+		gpio_rf {
+			gpio_rf_active: gpio_rf_active {
+				mux {
+					pins = "gpio119";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio119";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+			 gpio_rf_suspend: gpio_rf_suspend {
+				mux {
+					pins = "gpio119";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio119";
+					drive-strength = <2>;
+					bias-disable;
 				};
 			};
 		};

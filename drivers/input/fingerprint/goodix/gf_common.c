@@ -9,6 +9,7 @@
 #endif
 
 
+
 /******************** Function Definitions *************************/
 
 #ifdef SPI_ASYNC
@@ -127,6 +128,8 @@ int gf_spi_write_bytes(struct gf_dev *gf_dev, unsigned short addr, unsigned shor
 	kfree(xfer);
 	if (xfer != NULL)
 		xfer = NULL;
+
+
 
 	return 0;
 }

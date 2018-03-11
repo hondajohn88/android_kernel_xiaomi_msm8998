@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -178,7 +178,8 @@ static int modem_ramdump(int enable, const struct subsys_desc *subsys)
 	if (ret)
 		return ret;
 
-	ret = pil_do_ramdump(&drv->q6->desc, drv->ramdump_dev);
+	ret = pil_do_ramdump(&drv->q6->desc,
+			drv->ramdump_dev, drv->minidump_dev);
 	if (ret < 0)
 		pr_err("Unable to dump modem fw memory (rc = %d).\n", ret);
 
@@ -229,6 +230,7 @@ static int pil_subsys_init(struct modem_data *drv,
 		goto err_subsys;
 	}
 
+	drv->q6->desc.subsys_dev = drv->subsys;
 	drv->ramdump_dev = create_ramdump_device("modem", &pdev->dev);
 	if (!drv->ramdump_dev) {
 		pr_err("%s: Unable to create a modem ramdump device.\n",
@@ -236,9 +238,18 @@ static int pil_subsys_init(struct modem_data *drv,
 		ret = -ENOMEM;
 		goto err_ramdump;
 	}
+	drv->minidump_dev = create_ramdump_device("md_modem", &pdev->dev);
+	if (!drv->minidump_dev) {
+		pr_err("%s: Unable to create a modem minidump device.\n",
+			__func__);
+		ret = -ENOMEM;
+		goto err_minidump;
+	}
 
 	return 0;
 
+err_minidump:
+	destroy_ramdump_device(drv->ramdump_dev);
 err_ramdump:
 	subsys_unregister(drv->subsys);
 err_subsys:
@@ -420,6 +431,7 @@ static int pil_mss_driver_exit(struct platform_device *pdev)
 
 	subsys_unregister(drv->subsys);
 	destroy_ramdump_device(drv->ramdump_dev);
+	destroy_ramdump_device(drv->minidump_dev);
 	pil_desc_release(&drv->q6->desc);
 	return 0;
 }
@@ -490,12 +502,10 @@ static const struct file_operations last_modem_sfr_file_ops = {
 static int __init pil_mss_init(void)
 {
 	int ret;
-
 	last_modem_sfr_entry = proc_create("last_mcrash", S_IFREG | S_IRUGO, NULL, &last_modem_sfr_file_ops);
 	if (!last_modem_sfr_entry) {
 		printk(KERN_ERR "pil: cannot create proc entry last_mcrash\n");
 	}
-
 	ret = platform_driver_register(&pil_mba_mem_driver);
 	if (!ret)
 		ret = platform_driver_register(&pil_mss_driver);

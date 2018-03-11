@@ -2,7 +2,7 @@
  * The input core
  *
  * Copyright (c) 1999-2002 Vojtech Pavlik
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  */
 
 /*
@@ -64,37 +64,57 @@ static int input_device_is_touch(struct input_dev *input_dev)
 static inline void touch_press_release_events_collect(struct input_dev *dev,
 		 unsigned int type, unsigned int code, int value)
 {
-	if (dev->touch_events) {
-		pr_debug("type %d, code %d, value %d\n", type, code, value);
-		if (code == ABS_MT_TRACKING_ID) {
-			if (value != -1 && !dev->touch_is_pressed) { /* Pressed */
-				getnstimeofday(&dev->latest_touch_event.press_time_stamp);
-				dev->touch_is_pressed = true;
-			}
-		} else if (code == BTN_TOUCH) {
-			if (value == 0 && dev->touch_is_pressed) { /* Released */
-				getnstimeofday(&dev->latest_touch_event.release_time_stamp);
-				dev->touch_events->touch_event_buf[dev->touch_events->touch_event_num] =
-					dev->latest_touch_event;
-				dev->touch_events->touch_event_num++;
-				if (dev->touch_events->touch_event_num >= TOUCH_EVENT_MAX)
-					dev->touch_events->touch_event_num = 0;
-				dev->latest_touch_event.press_pos_x = 0;
-				dev->latest_touch_event.press_pos_y = 0;
-				dev->touch_is_pressed = false;
-			}
-		} else if (code == ABS_MT_POSITION_X) {
-			if (!dev->latest_touch_event.press_pos_x && dev->touch_is_pressed) {
-				dev->latest_touch_event.press_pos_x = value;
-			}
-			dev->latest_touch_event.release_pos_x = value;
-		} else if (code == ABS_MT_POSITION_Y) {
-			if (!dev->latest_touch_event.press_pos_y && dev->touch_is_pressed) {
-				dev->latest_touch_event.press_pos_y = value;
-			}
-			dev->latest_touch_event.release_pos_y = value;
+	struct touch_event *touch_event_buf;
+	struct touch_event_info *touch_events;
+
+	if (!dev->touch_events)
+		return;
+
+	touch_events = dev->touch_events;
+
+	pr_debug("type %d, code %d, value %d\n", type, code, value);
+	switch (code) {
+	case ABS_MT_SLOT:
+		if (value > TOUCH_MAX_FINGER)
+			value = 0;
+		touch_events->touch_slot = value;
+		break;
+
+	case ABS_MT_TRACKING_ID:
+		touch_event_buf = &touch_events->touch_event_buf[touch_events->touch_event_num];
+		touch_event_buf->finger_num = touch_events->touch_slot;
+
+		if (value != -1 && !(touch_events->finger_bitmap & BIT(touch_events->touch_slot))) {
+			touch_events->finger_bitmap |= BIT(touch_events->touch_slot);
+			touch_event_buf->touch_state = TOUCH_IS_PRESSED;
+			getnstimeofday(&touch_event_buf->touch_time_stamp);
+			touch_events->touch_event_num++;
+			touch_events->touch_is_pressed = true;
+		} else if (value == -1 && (touch_events->finger_bitmap & BIT(touch_events->touch_slot))) {
+			touch_events->finger_bitmap &= ~BIT(touch_events->touch_slot);
+			touch_event_buf->touch_state = TOUCH_IS_RELEASED;
+			getnstimeofday(&touch_event_buf->touch_time_stamp);
+			touch_events->touch_event_num++;
 		}
+
+		if (touch_events->touch_event_num >= TOUCH_EVENT_MAX)
+			touch_events->touch_event_num = 0;
+
+		break;
+
+	case BTN_TOUCH:
+		if (value == 0) {
+			if (touch_events->touch_is_pressed) {
+				touch_events->touch_is_pressed = false;
+			}
+			touch_events->finger_bitmap = 0;
+		}
+		break;
+
 	}
+
+	return;
+
 }
 #endif
 
@@ -1325,21 +1345,15 @@ static int last_touch_events_show(struct seq_file *seq, void *v)
 	seq_printf(seq, "Name=\"%s\"\n", dev->name ? dev->name : "");
 
 	for (i = 0; i < TOUCH_EVENT_MAX; i++) {
-		if (dev->touch_events->touch_event_buf[i].release_pos_x == 0 &&
-			dev->touch_events->touch_event_buf[i].release_pos_y == 0)
+		if (dev->touch_events->touch_event_buf[i].touch_state == TOUCH_IS_INIT)
 			continue;
-
-		rtc_time_to_tm(dev->touch_events->touch_event_buf[i].press_time_stamp.tv_sec, &tm);
-		seq_printf(seq, "%d-%02d-%02d %02d:%02d:%02d.%09lu UTC Postion (%d, %d) pressed\n",
+		rtc_time_to_tm(dev->touch_events->touch_event_buf[i].touch_time_stamp.tv_sec, &tm);
+		seq_printf(seq, "%d-%02d-%02d %02d:%02d:%02d.%09lu UTC Finger (%2d) %s\n",
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-			tm.tm_hour, tm.tm_min, tm.tm_sec, dev->touch_events->touch_event_buf[i].press_time_stamp.tv_nsec,
-			dev->touch_events->touch_event_buf[i].press_pos_x, dev->touch_events->touch_event_buf[i].press_pos_y);
-
-		rtc_time_to_tm(dev->touch_events->touch_event_buf[i].release_time_stamp.tv_sec, &tm);
-		seq_printf(seq, "%d-%02d-%02d %02d:%02d:%02d.%09lu UTC Postion (%d, %d) released\n",
-			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-			tm.tm_hour, tm.tm_min, tm.tm_sec, dev->touch_events->touch_event_buf[i].release_time_stamp.tv_nsec,
-			dev->touch_events->touch_event_buf[i].release_pos_x, dev->touch_events->touch_event_buf[i].release_pos_y);
+			tm.tm_hour, tm.tm_min, tm.tm_sec,
+			dev->touch_events->touch_event_buf[i].touch_time_stamp.tv_nsec,
+			dev->touch_events->touch_event_buf[i].finger_num,
+			dev->touch_events->touch_event_buf[i].touch_state == TOUCH_IS_PRESSED ? "P" : "R");
 	}
 	return 0;
 }
@@ -2291,10 +2305,10 @@ int input_register_device(struct input_dev *dev)
 		if (dev->touch_events == NULL) {
 			pr_err("Touch event: alloc memory failed\n");
 		}
-
-		dev->touch_is_pressed = false;
-		dev->latest_touch_event.press_pos_x = 0;
-		dev->latest_touch_event.press_pos_y = 0;
+		dev->touch_events->touch_is_pressed = false;
+		dev->touch_events->touch_event_num = 0;
+		dev->touch_events->touch_slot = 0;
+		dev->touch_events->finger_bitmap = 0;
 	}
 #endif
 	return 0;

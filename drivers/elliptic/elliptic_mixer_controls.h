@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2017 XiaoMi, Inc.
- */
 #pragma once
 #include <sound/core.h>
 #include <sound/pcm.h>

@@ -5,7 +5,7 @@
  *  Copyright © 2007  Anton Vorontsov <cbou@mail.ru>
  *  Copyright © 2004  Szabolcs Gyurko
  *  Copyright © 2003  Ian Molton <spyro@f2s.com>
- *  Copyright (C) 2017 XiaoMi, Inc.
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *
  *  Modified: 2004, Oct     Szabolcs Gyurko
  *
@@ -47,7 +47,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 	static char *type_text[] = {
 		"Unknown", "Battery", "UPS", "Mains", "USB", "USB_DCP",
 		"USB_CDP", "USB_ACA", "USB_HVDCP", "USB_HVDCP_3", "USB_PD",
-		"Wireless", "BMS", "Parallel", "Main", "Wipower",
+		"Wireless", "USB_FLOAT", "BMS", "Parallel", "Main", "Wipower",
 		"TYPEC", "TYPEC_UFP", "TYPEC_DFP"
 	};
 	static char *status_text[] = {
@@ -248,6 +248,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(low_power),
 	POWER_SUPPLY_ATTR(temp_cool),
 	POWER_SUPPLY_ATTR(temp_warm),
+	POWER_SUPPLY_ATTR(temp_cold),
+	POWER_SUPPLY_ATTR(temp_hot),
 	POWER_SUPPLY_ATTR(system_temp_level),
 	POWER_SUPPLY_ATTR(resistance),
 	POWER_SUPPLY_ATTR(resistance_capacitive),
@@ -270,6 +272,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(current_qnovo),
 	POWER_SUPPLY_ATTR(voltage_qnovo),
 	POWER_SUPPLY_ATTR(rerun_aicl),
+	POWER_SUPPLY_ATTR(charger_type),
 	POWER_SUPPLY_ATTR(cycle_count_id),
 	POWER_SUPPLY_ATTR(safety_timer_expired),
 	POWER_SUPPLY_ATTR(restricted_charging),
@@ -298,6 +301,13 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(hw_current_max),
 	POWER_SUPPLY_ATTR(real_type),
 	POWER_SUPPLY_ATTR(pr_swap),
+	POWER_SUPPLY_ATTR(cc_step),
+	POWER_SUPPLY_ATTR(cc_step_sel),
+	POWER_SUPPLY_ATTR(sw_jeita_enabled),
+	POWER_SUPPLY_ATTR(pd_voltage_max),
+	POWER_SUPPLY_ATTR(pd_voltage_min),
+	POWER_SUPPLY_ATTR(sdp_current_max),
+	POWER_SUPPLY_ATTR(rerun_apsd),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
 	/* Properties of type `const char *' */

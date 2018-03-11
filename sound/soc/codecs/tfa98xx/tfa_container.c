@@ -389,7 +389,7 @@ static enum Tfa98xx_Error tfaContWriteVstep(int dev_idx,  nxpTfaVolumeStep2File_
 		err = tfa_cont_write_filterbank(dev_idx, vp->vstep[vstep].filter);
 
 	} else {
-		pr_err("Incorrect volume given. The value vstep[%d] >= %d\n", nxp_tfa_vstep[dev_idx] , vp->vsteps);
+		pr_err("Incorrect volume given. The value vstep[%d] >= %d\n", nxp_tfa_vstep[dev_idx], vp->vsteps);
 		err = Tfa98xx_Error_Bad_Parameter;
 	}
 
@@ -680,7 +680,7 @@ static enum Tfa98xx_Error tfaContWriteVstepMax2(int dev_idx, nxpTfaVolumeStepMax
 		bitF.field = (uint16_t)(regInfo->registerInfo[i]>>8) | (regInfo->registerInfo[i]<<8);
 		i++;
 		bitF.value = (uint16_t)regInfo->registerInfo[i]>>8;
-		err = tfaRunWriteBitfield(dev_idx , bitF);
+		err = tfaRunWriteBitfield(dev_idx, bitF);
 		if (err != Tfa98xx_Error_Ok)
 			return err;
 	}
@@ -1021,7 +1021,7 @@ enum Tfa98xx_Error tfaRunWriteFilter(Tfa98xx_handle_t dev, nxpTfaContBiquad_t *b
 		if (tfa98xx_dev_family(dev) == 2) {
 			error = tfa_dsp_cmd_id_write(dev, MODULE_FRAMEWORK, FW_PAR_ID_SET_MEMORY, sizeof(data), data);
 		} else {
-			error = tfa_dsp_cmd_id_write(dev, MODULE_FRAMEWORK, 4 /* param */ , sizeof(data), data);
+			error = tfa_dsp_cmd_id_write(dev, MODULE_FRAMEWORK, 4 /* param */, sizeof(data), data);
 		}
 	}
 
@@ -1111,7 +1111,7 @@ enum Tfa98xx_Error tfaContWriteRegsDev(int dev_idx)
 
 		if (dev->list[i].type == dscBitfield) {
 			bitF = (nxpTfaBitfield_t *)(dev->list[i].offset+(uint8_t *)g_cont);
-			err = tfaRunWriteBitfield(dev_idx , *bitF);
+			err = tfaRunWriteBitfield(dev_idx, *bitF);
 		}
 		if (dev->list[i].type == dscRegister) {
 			err = tfaRunWriteRegister(dev_idx, (nxpTfaRegpatch_t *)
@@ -1146,7 +1146,7 @@ enum Tfa98xx_Error tfaContWriteRegsProf(int dev_idx, int prof_idx)
 
 		if (prof->list[i].type == dscBitfield) {
 			bitf = (nxpTfaBitfield_t *)(prof->list[i].offset+(uint8_t *)g_cont);
-			err = tfaRunWriteBitfield(dev_idx , *bitf);
+			err = tfaRunWriteBitfield(dev_idx, *bitf);
 		}
 		if (prof->list[i].type == dscRegister)
 			err = tfaRunWriteRegister(dev_idx, (nxpTfaRegpatch_t *)(!prof->list[i].offset+g_cont));

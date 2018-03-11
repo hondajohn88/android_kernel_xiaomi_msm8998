@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -663,7 +663,11 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 			mp->vreg_config[i].post_off_sleep = tmp;
 		}
 
-		pr_debug("%s: %s min=%d, max=%d, enable=%d, disable=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
+		mp->vreg_config[i].lp_disable_allowed =
+			of_property_read_bool(supply_node,
+			"qcom,supply-lp-mode-disable-allowed");
+
+		pr_debug("%s: %s min=%d, max=%d, enable=%d, disable=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d lp_disable_allowed=%d\n",
 			__func__,
 			mp->vreg_config[i].vreg_name,
 			mp->vreg_config[i].min_voltage,
@@ -673,8 +677,8 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 			mp->vreg_config[i].pre_on_sleep,
 			mp->vreg_config[i].post_on_sleep,
 			mp->vreg_config[i].pre_off_sleep,
-			mp->vreg_config[i].post_off_sleep
-			);
+			mp->vreg_config[i].post_off_sleep,
+			mp->vreg_config[i].lp_disable_allowed);
 		++i;
 	}
 
@@ -769,6 +773,11 @@ static ssize_t mdss_dsi_cmd_state_write(struct file *file,
 {
 	int *link_state = file->private_data;
 	char *input;
+
+	if (!count) {
+		pr_err("%s: Zero bytes to be written\n", __func__);
+		return -EINVAL;
+	}
 
 	input = kmalloc(count, GFP_KERNEL);
 	if (!input) {
@@ -901,10 +910,15 @@ static ssize_t mdss_dsi_cmd_write(struct file *file, const char __user *p,
 
 	/* Writing in batches is possible */
 	ret = simple_write_to_buffer(string_buf, blen, ppos, p, count);
+	if (ret < 0) {
+		pr_err("%s: Failed to copy data\n", __func__);
+		mutex_unlock(&pcmds->dbg_mutex);
+		return -EINVAL;
+	}
 
-	string_buf[blen] = '\0';
+	string_buf[ret] = '\0';
 	pcmds->string_buf = string_buf;
-	pcmds->sblen = blen;
+	pcmds->sblen = count;
 	mutex_unlock(&pcmds->dbg_mutex);
 	return ret;
 }
@@ -955,7 +969,7 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 	while (len >= sizeof(*dchdr)) {
 		dchdr = (struct dsi_ctrl_hdr *)bp;
 		dchdr->dlen = ntohs(dchdr->dlen);
-		if (dchdr->dlen > len) {
+		if (dchdr->dlen > len || dchdr->dlen < 0) {
 			pr_err("%s: dtsi cmd=%x error, len=%d\n",
 				__func__, dchdr->dtype, dchdr->dlen);
 			kfree(buf);
@@ -1814,6 +1828,18 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 	return 0;
 }
 
+static irqreturn_t test_hw_vsync_handler(int irq, void *data)
+{
+	struct mdss_panel_data *pdata = (struct mdss_panel_data *)data;
+
+	pr_debug("HW VSYNC\n");
+	MDSS_XLOG(0xaaa, irq);
+	complete_all(&pdata->te_done);
+	if (pdata->next)
+		complete_all(&pdata->next->te_done);
+	return IRQ_HANDLED;
+}
+
 int mdss_dsi_cont_splash_on(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -2078,7 +2104,7 @@ static int __mdss_dsi_dfps_update_clks(struct mdss_panel_data *pdata,
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_dsi_ctrl_pdata *sctrl_pdata = NULL;
-	struct mdss_panel_info *pinfo, *spinfo;
+	struct mdss_panel_info *pinfo, *spinfo = NULL;
 	int rc = 0;
 
 	if (pdata == NULL) {
@@ -2724,8 +2750,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 				ctrl_pdata->update_phy_timing);
 
 		rc = mdss_dsi_on(pdata);
-		mdss_dsi_op_mode_config(pdata->panel_info.mipi.mode,
-							pdata);
 		break;
 	case MDSS_EVENT_UNBLANK:
 		if (ctrl_pdata->on_cmds.link_state == DSI_LP_MODE)
@@ -3281,21 +3305,6 @@ end:
 	return rc;
 }
 
-static void mdss_dsi_ctrl_validate_lane_swap_config(
-	struct mdss_dsi_ctrl_pdata *ctrl)
-{
-	struct mipi_panel_info *mipi = &ctrl->panel_data.panel_info.mipi;
-
-	if (!mipi->data_lane0)
-		ctrl->lane_map[DSI_LOGICAL_LANE_0] = DSI_PHYSICAL_LANE_INVALID;
-	if (!mipi->data_lane1)
-		ctrl->lane_map[DSI_LOGICAL_LANE_1] = DSI_PHYSICAL_LANE_INVALID;
-	if (!mipi->data_lane2)
-		ctrl->lane_map[DSI_LOGICAL_LANE_2] = DSI_PHYSICAL_LANE_INVALID;
-	if (!mipi->data_lane3)
-		ctrl->lane_map[DSI_LOGICAL_LANE_3] = DSI_PHYSICAL_LANE_INVALID;
-}
-
 static int mdss_dsi_ctrl_validate_config(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	int rc = 0;
@@ -3304,8 +3313,6 @@ static int mdss_dsi_ctrl_validate_config(struct mdss_dsi_ctrl_pdata *ctrl)
 		rc = -EINVAL;
 		goto error;
 	}
-
-	mdss_dsi_ctrl_validate_lane_swap_config(ctrl);
 
 	/*
 	 * check to make sure that the byte interface clock is specified for
@@ -3331,6 +3338,8 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	struct device_node *dsi_pan_node = NULL;
 	const char *ctrl_name;
 	struct mdss_util_intf *util;
+	static int te_irq_registered;
+	struct mdss_panel_data *pdata;
 
 	if (!pdev || !pdev->dev.of_node) {
 		pr_err("%s: pdev not found for DSI controller\n", __func__);
@@ -3451,10 +3460,28 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			hw_vsync_handler, IRQF_TRIGGER_FALLING,
 			"VSYNC_GPIO", ctrl_pdata);
 		if (rc) {
-			pr_err("TE request_irq failed.\n");
+			pr_err("%s: TE request_irq failed for ESD\n", __func__);
 			goto error_shadow_clk_deinit;
 		}
+		te_irq_registered = 1;
 		disable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
+	}
+
+	pdata = &ctrl_pdata->panel_data;
+	init_completion(&pdata->te_done);
+	if (pdata->panel_info.type == MIPI_CMD_PANEL) {
+		if (!te_irq_registered) {
+			rc = devm_request_irq(&pdev->dev,
+				gpio_to_irq(pdata->panel_te_gpio),
+				test_hw_vsync_handler, IRQF_TRIGGER_FALLING,
+				"VSYNC_GPIO", &ctrl_pdata->panel_data);
+			if (rc) {
+				pr_err("%s: TE request_irq failed\n", __func__);
+				goto error_shadow_clk_deinit;
+			}
+			te_irq_registered = 1;
+			disable_irq_nosync(gpio_to_irq(pdata->panel_te_gpio));
+		}
 	}
 
 	rc = mdss_dsi_get_bridge_chip_params(pinfo, ctrl_pdata, pdev);
@@ -4277,6 +4304,8 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 	 * If disp_en_gpio has been set previously (disp_en_gpio > 0)
 	 *  while parsing the panel node, then do not override it
 	 */
+	struct mdss_panel_data *pdata = &ctrl_pdata->panel_data;
+
 	if (ctrl_pdata->disp_en_gpio <= 0) {
 		ctrl_pdata->disp_en_gpio = of_get_named_gpio(
 			ctrl_pdev->dev.of_node,
@@ -4293,6 +4322,7 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 	if (!gpio_is_valid(ctrl_pdata->disp_te_gpio))
 		pr_err("%s:%d, TE gpio not specified\n",
 						__func__, __LINE__);
+	pdata->panel_te_gpio = ctrl_pdata->disp_te_gpio;
 
 	ctrl_pdata->bklt_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 		"qcom,platform-bklight-en-gpio", 0);
@@ -4302,6 +4332,15 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 	ctrl_pdata->bklt_en_gpio_invert =
 			of_property_read_bool(ctrl_pdev->dev.of_node,
 				"qcom,platform-bklight-en-gpio-invert");
+
+	ctrl_pdata->avdd_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
+			"qcom,platform-avdd-en-gpio", 0);
+	if (!gpio_is_valid(ctrl_pdata->avdd_en_gpio))
+		pr_info("%s: avdd_en gpio not specified\n", __func__);
+
+	ctrl_pdata->avdd_en_gpio_invert =
+			of_property_read_bool(ctrl_pdev->dev.of_node,
+				"qcom,platform-avdd-en-gpio-invert");
 
 	ctrl_pdata->rst_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 			 "qcom,platform-reset-gpio", 0);

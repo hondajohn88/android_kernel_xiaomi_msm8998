@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -395,9 +395,6 @@ struct synaptics_rmi4_data {
 	bool f11_wakeup_gesture;
 	bool f12_wakeup_gesture;
 	bool enable_wakeup_gesture;
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_REVERSED_KEYS_FORCE
-	bool enable_reversed_keys;
-#endif
 	bool wedge_sensor;
 	bool report_pressure;
 	bool stylus_enable;

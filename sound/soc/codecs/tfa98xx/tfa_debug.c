@@ -83,7 +83,7 @@ static char *tfa_bf2name(tfaBfName_t *table, uint16_t bf)
  * lookup name in table
  *   return 0xffff if not found
  */
-static uint16_t tfa_name2bf(tfaBfName_t *table, const  char *name)
+static uint16_t tfa_name2bf(tfaBfName_t *table, const char *name)
 {
 	int n = 0;
 

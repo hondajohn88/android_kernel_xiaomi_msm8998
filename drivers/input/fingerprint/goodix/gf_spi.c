@@ -3,7 +3,7 @@
  * Copyright (C) 2006 SWAPP
  *     Andrea Paterniani <a.paterniani@swapp-eng.it>
  * Copyright (C) 2007 David Brownell (simplification, cleanup)
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,8 +113,8 @@ static DEFINE_MUTEX(device_list_lock);
 static struct gf_dev gf;
 static unsigned int bufsiz = 22180;
 static unsigned char g_frame_buf[22180] = {0};
-static unsigned short g_vendorID = 0;
-static unsigned int g_chipID = 0;
+static unsigned short g_vendorID;
+static unsigned int g_chipID;
 static struct wake_lock fp_wakelock;
 static unsigned int gf_spi_speed[GF_SPI_KEEP_SPEED] = {4800000, 4800000};
 
@@ -431,7 +431,7 @@ static long gf_ioctl(struct file *filp, unsigned int cmd,
 		}
 		break;
 	case GF_IOC_CMD:
-		retval = __get_user(command , (u32 __user *)arg);
+		retval = __get_user(command, (u32 __user *)arg);
 		mutex_lock(&gf_dev->frame_lock);
 		gf_spi_send_cmd(gf_dev, &command, 1);
 		mutex_unlock(&gf_dev->frame_lock);
@@ -922,6 +922,8 @@ static struct spi_driver gf_driver = {
 		},
 		.probe = gf_probe,
 		.remove = gf_remove,
+
+
 	};
 
 static int __init gf_init(void)

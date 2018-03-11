@@ -2,11 +2,13 @@
 #define OIS_MAIN_H
 
 /* Compile Switch Purpose*/
-#define ENABLE_GYRO_DRIFT_COMP
+/* #define CENTER_OF_HALL_OUT // RHM_HT 2013.03.15 Enable to detect hall output center and set shifted offset value */
+#define ENABLE_GYRO_DRIFT_COMP /* RHM_HT 2013/11/25 Added */
 #define _STR_AREA_ "F:\\DEBUGBMP\\" /* For Image save (Debug purpose) */
 #if 0
 #define OIS_GYRO_ST
 #endif
+/* ==> RHM_HT 2013/04/15 Add to the report for error details */
 /* #define OIS_TRUE  0 */
 /* #define OIS_FALSE -1 */
 /* #define OIS_READY 1 */
@@ -42,8 +44,8 @@
 #define ACGX_KGXG_ADJ_ERR -31
 #define ACGY_KGYG_ADJ_ERR -32
 
-#define TMP_X_ADJ_ERR -33
-#define TMP_Y_ADJ_ERR -34
+#define TMP_X_ADJ_ERR -33 /* RHM_HT 2013/11/25 Added */
+#define TMP_Y_ADJ_ERR -34 /* RHM_HT 2013/11/25 Added */
 
 #define MALLOC1_ERR -51
 #define MALLOC2_ERR -52
@@ -75,10 +77,11 @@
 #define OIS_MALLOC11_ERROR -121
 #define OIS_MALLOC12_ERROR -122
 #define OIS_MALLOC13_ERROR -123
-#define OIS_MALLOC14_ERROR -124
+#define OIS_MALLOC14_ERROR -124	/* RHM_HT 2013/11/25 add */
 
 typedef short int ADJ_STS;
 /* typedef short int OIS_BOOL; */
+/* <== RHM_HT 2013/04/15 Add to the report for error details */
 
 typedef char	  OIS_BYTE;
 typedef short int OIS_WORD;
@@ -119,10 +122,10 @@ typedef struct tagApproxResult {
 
 /* #define Wait(a) Wait_usec(a*1000UL) */
 
-ADJ_STS func_PROGRAM_DOWNLOAD(void);
-uint8_t func_COEF_DOWNLOAD(OIS_UWORD u16_coef_type);
+ADJ_STS func_PROGRAM_DOWNLOAD(void); /* RHM_HT 2013/04/15 Change "typedef" of return value */
+uint8_t func_COEF_DOWNLOAD(OIS_UWORD u16_coef_type); /* RHM_HT 2013/11/26 Reverted */
 uint8_t download(OIS_UWORD u16_type, OIS_UWORD u16_coef_type);
-ADJ_STS func_SET_SCENE_PARAM(OIS_UBYTE u16_scene, OIS_UBYTE u16_mode, OIS_UBYTE filter, OIS_UBYTE range, const _FACT_ADJ *param);
+ADJ_STS func_SET_SCENE_PARAM(OIS_UBYTE u16_scene, OIS_UBYTE u16_mode, OIS_UBYTE filter, OIS_UBYTE range, const _FACT_ADJ *param); /* RHM_HT 2013/04/15 Change "typedef" of return value */
 void SET_FADJ_PARAM(const _FACT_ADJ *param);
 void I2C_OIS_per_write(OIS_UBYTE u08_adr, OIS_UWORD u16_dat);
 void I2C_OIS_mem_write(OIS_UBYTE u08_adr, OIS_UWORD u16_dat);
@@ -141,8 +144,9 @@ OIS_UWORD RD_I2C(OIS_UBYTE slvadr, OIS_UBYTE size, OIS_UBYTE *dat);
 void store_FADJ_MEM_to_non_volatile_memory(_FACT_ADJ param);
 void get_FADJ_MEM_from_non_volatile_memory(void);
 /* void Wait_usec(OIS_ULONG time); */
-int debug_print(const char *format, ...);
+int debug_print(const char *format, ...); /* RHM_HT 2013/04/15	Add for DEBUG */
 
+/* #define DEBUG_FADJ //Darcy Mask/20140919 */
 #ifdef DEBUG_FADJ
 /* #define DEBUG_printf(a) printf a */
 #define DEBUG_printf(a) debug_print a

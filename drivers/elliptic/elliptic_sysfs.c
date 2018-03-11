@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2017 XiaoMi, Inc.
- */
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/device.h>

@@ -259,6 +259,7 @@ config PAGE_OWNER
 	depends on DEBUG_KERNEL && STACKTRACE_SUPPORT
 	select DEBUG_FS
 	select STACKTRACE
+	select STACKDEPOT
 	select PAGE_EXTENSION
 	help
 	  This keeps track of what call chain is the owner of a page, may
@@ -286,6 +287,64 @@ config DEBUG_FS
 
 	  For detailed documentation on the debugfs API, see
 	  Documentation/DocBook/filesystems.
+
+	  If unsure, say N.
+
+config DEBUG_FS_DIGEST0
+	hex "First digest value for debugfs protection"
+	depends on DEBUG_FS
+	help
+	  Enable this option to be able to require password during mount debugfs.
+
+	  If unsure, say N.
+
+config DEBUG_FS_DIGEST1
+	hex "Second digest value for debugfs protection"
+	depends on DEBUG_FS
+	help
+	  Enable this option to be able to require password during mount debugfs.
+
+	  If unsure, say N.
+
+config DEBUG_FS_DIGEST2
+	hex "Third digest value for debugfs protection"
+	depends on DEBUG_FS
+	help
+	  Enable this option to be able to require password during mount debugfs.
+
+	  If unsure, say N.
+
+config DEBUG_FS_DIGEST3
+	hex "Fourth digest value for debugfs protection"
+	depends on DEBUG_FS
+	help
+	  Enable this option to be able to require password during mount debugfs.
+
+	  If unsure, say N.
+
+config DEBUG_FS_DIGEST4
+	hex "Fifth digest value for debugfs protection"
+	depends on DEBUG_FS
+	help
+	  Enable this option to be able to require password during mount debugfs.
+
+	  If unsure, say N.
+
+config DEBUG_FS_WHITE_LIST
+	string "The debugfs protection white list"
+	depends on DEBUG_FS
+	help
+	  Enable this option to set the directory path list separated by colon
+	  which don't need to protect by password.
+
+	  If unsure, say N.
+
+config DEBUG_FS_PRINT_DIGEST
+	bool "Print debugfs digest value for debug purpose"
+	depends on DEBUG_FS
+	default n
+	help
+	  Enable this option to print the calculated digest value.
 
 	  If unsure, say N.
 
@@ -966,20 +1025,6 @@ config DEBUG_TIMEKEEPING
 
 	  If unsure, say N.
 
-config TIMER_STATS
-	bool "Collect kernel timers statistics"
-	depends on DEBUG_KERNEL && PROC_FS
-	help
-	  If you say Y here, additional code will be inserted into the
-	  timer routines to collect statistics about kernel timers being
-	  reprogrammed. The statistics can be read from /proc/timer_stats.
-	  The statistics collection is started by writing 1 to /proc/timer_stats,
-	  writing 0 stops it. This feature is useful to collect information
-	  about timer usage patterns in kernel and userspace. This feature
-	  is lightweight if enabled in the kernel config but not activated
-	  (it defaults to deactivated on bootup and will only be activated
-	  if some application like powertop activates it explicitly).
-
 config DEBUG_TASK_STACK_SCAN_OFF
 	bool "Disable kmemleak task stack scan by default"
 	depends on DEBUG_KMEMLEAK
@@ -1469,6 +1514,17 @@ config RCU_CPU_STALL_TIMEOUT
 	  number of seconds, a CPU stall warning is printed.  If the
 	  RCU grace period persists, additional CPU stall warnings are
 	  printed at more widely spaced intervals.
+
+config RCU_STALL_WATCHDOG_BITE
+	bool "RCU stall induce watchdog bite"
+	depends on RCU_STALL_COMMON && QCOM_WATCHDOG_V2
+	help
+	  Induce watchdog bite if RCU grace period extends more than
+	  specified no of seconds instead of just warning messages.
+	  This helps to collect ram dumps and cpu context for
+	  postmortem analysis. Generally if a given RCU grace period
+	  extends more than the specified number of seconds,
+	  a CPU stall warning is printed.
 
 config RCU_TRACE
 	bool "Enable tracing for RCU"

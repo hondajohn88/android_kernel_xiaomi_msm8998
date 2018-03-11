@@ -1,6 +1,5 @@
 ccflags-y := -I$(src) -Wall -Werror
 IO_MODULE := msm
-#IO_MODULE := userspace
 MIXER_MODULE := test
 
 EXTRA_CFLAGS += -DDEBUG

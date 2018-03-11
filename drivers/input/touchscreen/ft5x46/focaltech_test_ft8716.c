@@ -1,6 +1,6 @@
 /************************************************************************
 * Copyright (C) 2012-2015, Focaltech Systems (R)£¬All Rights Reserved.
-* Copyright (C) 2017 XiaoMi, Inc.
+* Copyright (C) 2018 XiaoMi, Inc.
 *
 * File Name: Test_FT8716.c
 *
@@ -227,7 +227,7 @@ static unsigned char GetChannelNum(void)
 		continue;
 	}
 
-	FTS_TEST_DBG("CH_X = %d, CH_Y = %d, Key = %d",  g_stSCapConfEx.ChannelXNum , g_stSCapConfEx.ChannelYNum, g_stSCapConfEx.KeyNum);
+	FTS_TEST_DBG("CH_X = %d, CH_Y = %d, Key = %d",  g_stSCapConfEx.ChannelXNum, g_stSCapConfEx.ChannelYNum, g_stSCapConfEx.KeyNum);
 	return ReCode;
 }
 unsigned char FT8716_TestItem_OpenTest(struct i2c_client *client)

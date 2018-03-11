@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011 Sascha Hauer <s.hauer@pengutronix.de>
  * Copyright (C) 2011-2012 Avionic Design GmbH
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -321,6 +321,8 @@ int pwmchip_remove(struct pwm_chip *chip)
 	unsigned int i;
 	int ret = 0;
 
+	pwmchip_sysfs_unexport_children(chip);
+
 	mutex_lock(&pwm_lock);
 
 	for (i = 0; i < chip->npwm; i++) {
@@ -474,8 +476,9 @@ int pwm_set_polarity(struct pwm_device *pwm, enum pwm_polarity polarity)
 	if (!pwm->chip->ops->set_polarity)
 		return -ENOSYS;
 
-	if (pwm_is_enabled(pwm))
+	if (pwm_is_enabled(pwm)) {
 		return -EBUSY;
+	}
 
 	err = pwm->chip->ops->set_polarity(pwm->chip, pwm, polarity);
 	if (err)
@@ -495,8 +498,9 @@ EXPORT_SYMBOL_GPL(pwm_set_polarity);
  */
 int pwm_enable(struct pwm_device *pwm)
 {
-	if (pwm && !test_and_set_bit(PWMF_ENABLED, &pwm->flags))
-		return pwm->chip->ops->enable(pwm->chip, pwm);
+	if (pwm && !test_and_set_bit(PWMF_ENABLED, &pwm->flags)) {
+		return  pwm->chip->ops->enable(pwm->chip, pwm);
+	}
 
 	return pwm ? 0 : -EINVAL;
 }
@@ -871,7 +875,7 @@ EXPORT_SYMBOL_GPL(devm_pwm_put);
   */
 bool pwm_can_sleep(struct pwm_device *pwm)
 {
-	return pwm->chip->can_sleep;
+	return true;
 }
 EXPORT_SYMBOL_GPL(pwm_can_sleep);
 

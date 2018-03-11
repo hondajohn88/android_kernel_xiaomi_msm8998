@@ -4,7 +4,7 @@
  * Original Copyright (C) 1995  Linus Torvalds
  * Copyright (C) 1996-2000 Russell King - Converted to ARM.
  * Copyright (C) 2012 ARM Ltd.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -50,6 +50,7 @@
 #include <asm/alternative.h>
 #include <asm/compat.h>
 #include <asm/cacheflush.h>
+#include <asm/exec.h>
 #include <asm/fpsimd.h>
 #include <asm/mmu_context.h>
 #include <asm/processor.h>
@@ -384,7 +385,7 @@ static void tls_thread_switch(struct task_struct *next)
 }
 
 /* Restore the UAO state depending on next's addr_limit */
-static void uao_thread_switch(struct task_struct *next)
+void uao_thread_switch(struct task_struct *next)
 {
 	if (IS_ENABLED(CONFIG_ARM64_UAO)) {
 		if (task_thread_info(next)->addr_limit == KERNEL_DS)

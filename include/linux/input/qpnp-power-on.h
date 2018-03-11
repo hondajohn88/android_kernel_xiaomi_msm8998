@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2015, 2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -60,8 +60,8 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_DMVERITY_ENFORCE	= 0x05,
 	PON_RESTART_REASON_KEYS_CLEAR		= 0x06,
 	PON_RESTART_REASON_OEM_BOOT		= 0x07,
-	PON_RESTART_REASON_NORMAL		= 0x20,
-	PON_RESTART_REASON_PANIC		= 0x21,
+	PON_RESTART_REASON_NORMAL               = 0x20,
+	PON_RESTART_REASON_PANIC                = 0x21,
 };
 
 #ifdef CONFIG_INPUT_QPNP_POWER_ON

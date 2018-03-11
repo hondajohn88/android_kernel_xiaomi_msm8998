@@ -18,7 +18,7 @@
  * and processes may not get killed until the normal oom killer is triggered.
  *
  * Copyright (C) 2007-2008 Google, Inc.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -502,7 +502,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			sc->nr_to_scan, sc->gfp_mask, other_free,
 			other_file, min_score_adj);
 
-	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
+	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1 || (ret == VMPRESSURE_ADJUST_ENCROACH)) {
 		trace_almk_shrink(0, ret, other_free, other_file, 0);
 		lowmem_print(5, "lowmem_scan %lu, %x, return 0\n",
 			     sc->nr_to_scan, sc->gfp_mask);
@@ -524,7 +524,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		int is_task_exist = 0;
 #endif
 
-		if (tsk->flags & PF_KTHREAD)
+		if (tsk->flags & PF_KTHREAD || tsk->state & TASK_UNINTERRUPTIBLE)
 			continue;
 
 		p = find_lock_task_mm(tsk);

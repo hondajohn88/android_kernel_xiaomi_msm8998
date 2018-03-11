@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,7 +33,6 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/input/qpnp-power-on.h>
 #include <linux/power_supply.h>
-#include <linux/wakelock.h>
 #include <linux/sched.h>
 
 #define PMIC_VER_8941           0x01
@@ -234,8 +233,6 @@ module_param_named(
 	ship_mode_en, pon_ship_mode_en, int, 0600
 );
 
-static struct wake_lock volume_down_wl;
-static const char *wake_lock_name = "volume_down_locker";
 static struct qpnp_pon *sys_reset_dev;
 static DEFINE_SPINLOCK(spon_list_slock);
 static LIST_HEAD(spon_dev_list);
@@ -1008,8 +1005,10 @@ static void collect_d_work_func(struct work_struct *work)
 	if ((pon_rt_sts & 0x3) == 0x3) {
 		console_verbose();
 		pr_err("------ collect D-state processes info before long comb key ------\n");
-		show_state_filter(TASK_UNINTERRUPTIBLE);
-		pr_err("------ end collecting D-state processes info ------\n");
+		show_state_filter_single(TASK_UNINTERRUPTIBLE);
+		pr_err("------ collect R-state processes info before long comb key ------\n");
+		show_state_filter_single(TASK_RUNNING);
+		pr_err("------ end collecting D&R-state processes info ------\n");
 		console_loglevel = tmp_console;
 	}
 err_return:
@@ -1039,7 +1038,6 @@ static irqreturn_t qpnp_resin_irq(int irq, void *_pon)
 	int rc;
 	struct qpnp_pon *pon = _pon;
 
-	wake_lock_timeout(&volume_down_wl, 3*HZ);
 	rc = qpnp_pon_input_dispatch(pon, PON_RESIN);
 	if (rc)
 		dev_err(&pon->pdev->dev, "Unable to send input event\n");
@@ -2514,9 +2512,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 					"qcom,store-hard-reset-reason");
 
 	qpnp_pon_debugfs_init(pdev);
-	/* if wake_lock not be initied, init it */
-	if (volume_down_wl.ws.name != wake_lock_name)
-		wake_lock_init(&volume_down_wl, WAKE_LOCK_SUSPEND, wake_lock_name);
 	return 0;
 }
 
@@ -2538,7 +2533,6 @@ static int qpnp_pon_remove(struct platform_device *pdev)
 		list_del(&pon->list);
 		spin_unlock_irqrestore(&spon_list_slock, flags);
 	}
-	wake_lock_destroy(&volume_down_wl);
 	return 0;
 }
 

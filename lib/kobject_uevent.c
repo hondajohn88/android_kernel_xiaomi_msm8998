@@ -4,7 +4,7 @@
  * Copyright (C) 2004 Red Hat, Inc.  All rights reserved.
  * Copyright (C) 2004 Novell, Inc.  All rights reserved.
  * Copyright (C) 2004 IBM, Inc. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * Licensed under the GNU GPL v2.
  *
@@ -51,9 +51,9 @@ struct uevent_buff {
 };
 
 static struct uevent_buff uevents_buff[UEVENT_RECORD_MAX];
-static u32 uevent_num = 0;
-static u32 index_head = 0;
-static u32 index_tail = 0;
+static u32 uevent_num;
+static u32 index_head;
+static u32 index_tail;
 #endif
 
 u64 uevent_seqnum;
@@ -233,7 +233,7 @@ static void parse_event(struct kobj_uevent_env *uevent_env, struct uevent_info *
 
 static void uevents_collect(struct kobj_uevent_env *uevent_env)
 {
-	static int m = 0;
+	static int m;
 	struct uevent_info uevent;
 
 	if (!spin_trylock(&uevent_lock))

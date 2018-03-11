@@ -1,7 +1,7 @@
 /*
 ** =============================================================================
 ** Copyright (c) 2016  Texas Instruments Inc.
-** Copyright (C) 2017 XiaoMi, Inc.
+** Copyright (C) 2018 XiaoMi, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify it under
 ** the terms of the GNU General Public License as published by the Free Software
@@ -42,6 +42,7 @@
 #include "tas2559-core.h"
 
 #define TAS2559_CAL_NAME    "/persist/audio/tas2559_cal.bin"
+#define RESTART_MAX 3
 
 static int tas2559_load_calibration(struct tas2559_priv *pTAS2559,
 				    char *pFileName);
@@ -864,6 +865,14 @@ static void failsafe(struct tas2559_priv *pTAS2559)
 	if (hrtimer_active(&pTAS2559->mtimer))
 		hrtimer_cancel(&pTAS2559->mtimer);
 
+	if (pTAS2559->mnRestart < RESTART_MAX) {
+		pTAS2559->mnRestart++;
+		msleep(100);
+		dev_err(pTAS2559->dev, "I2C COMM error, restart SmartAmp.\n");
+		schedule_delayed_work(&pTAS2559->irq_work, msecs_to_jiffies(100));
+		return;
+	}
+
 	pTAS2559->enableIRQ(pTAS2559, DevBoth, false);
 	tas2559_DevShutdown(pTAS2559, DevBoth);
 	pTAS2559->mbPowerUp = false;
@@ -1096,6 +1105,8 @@ int tas2559_enable(struct tas2559_priv *pTAS2559, bool bEnable)
 	if ((nValue & 0xff) != TAS2559_SAFE_GUARD_PATTERN) {
 		dev_err(pTAS2559->dev, "ERROR DevA safe guard (0x%x) failure!\n", nValue);
 		nResult = -EPIPE;
+		pTAS2559->mnErrCode = ERROR_SAFE_GUARD;
+		pTAS2559->mbPowerUp = true;
 		goto end;
 	}
 
@@ -1161,6 +1172,7 @@ int tas2559_enable(struct tas2559_priv *pTAS2559, bool bEnable)
 			}
 
 			pTAS2559->mbPowerUp = true;
+			pTAS2559->mnRestart = 0;
 		}
 	} else {
 		if (pTAS2559->mbPowerUp) {
@@ -1179,6 +1191,7 @@ int tas2559_enable(struct tas2559_priv *pTAS2559, bool bEnable)
 				goto end;
 
 			pTAS2559->mbPowerUp = false;
+			pTAS2559->mnRestart = 0;
 		}
 	}
 
@@ -1187,7 +1200,7 @@ int tas2559_enable(struct tas2559_priv *pTAS2559, bool bEnable)
 end:
 
 	if (nResult < 0) {
-		if (pTAS2559->mnErrCode & (ERROR_DEVA_I2C_COMM | ERROR_DEVB_I2C_COMM | ERROR_PRAM_CRCCHK | ERROR_YRAM_CRCCHK))
+		if (pTAS2559->mnErrCode & (ERROR_DEVA_I2C_COMM | ERROR_DEVB_I2C_COMM | ERROR_PRAM_CRCCHK | ERROR_YRAM_CRCCHK | ERROR_SAFE_GUARD))
 			failsafe(pTAS2559);
 	}
 

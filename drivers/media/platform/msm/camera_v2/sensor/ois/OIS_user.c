@@ -6,7 +6,7 @@
 * Rule: Use TAB 4
 *
 * Copyright(c)	Rohm Co.,Ltd. All rights reserved
-* Copyright (C) 2017 XiaoMi, Inc.
+* Copyright (C) 2018 XiaoMi, Inc.
 **************************************************************************/
 /***** ROHM Confidential ***************************************************/
 #ifndef OIS_USER_C
@@ -19,7 +19,7 @@
 OIS_UWORD FOCUS_VAL = 0x0122; /* Focus Value */
 
 #ifdef OIS_GYRO_ST
-OIS_UBYTE open_flag = 0;
+OIS_UBYTE open_flag;
 /*********************************************************
 * ST Gyro - Disable SPI2
 * ---------------------------------------------------------
@@ -239,7 +239,7 @@ void fadj_ois_gyro_offset_calibraion(void)
 *    You have to port your own system.
 *
 **********************************************************/
-static int fadj_got = 0;
+static int fadj_got;
 extern uint8_t g_cal_fadj_data[128];
 
 void get_FADJ_MEM_from_non_volatile_memory(void)
@@ -253,6 +253,7 @@ void get_FADJ_MEM_from_non_volatile_memory(void)
 
 	memcpy((void *)buf, (void *)g_cal_fadj_data, 43);
 	memcpy((void *) data, (void *) (&buf[0x05]), 38);
+	/* g_i2c_ctrl->i2c_client.i2c_func_tbl->i2c_read_seq(&g_i2c_ctrl->i2c_client, 0x3A, data, 38); */
 	pr_debug("ois fadj 0x%04x 0x%04x 0x%04x\n", FADJ_MEM.gl_CURDAT, FADJ_MEM.gl_HALOFS_X, FADJ_MEM.gl_HALOFS_Y);
 	/* g_i2c_ctrl->i2c_client.cci_client->sid = sid; */
 

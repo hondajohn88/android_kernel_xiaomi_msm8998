@@ -516,19 +516,19 @@ struct rw_semaphore *rwsem_wake(struct rw_semaphore *sem)
 	 * respect to decrement of rwsem count in __up_write() leading
 	 * to wakeup being missed.
 	 *
-	 * spinning writer up_write caller
-	 * --------------- -----------------------
-	 * [S] osq_unlock() [L] osq
-	 * spin_lock(wait_lock)
-	 * sem->count=0xFFFFFFFF00000001
-	 * +0xFFFFFFFF00000000
-	 * count=sem->count
-	 * MB
-	 * sem->count=0xFFFFFFFE00000001
-	 * -0xFFFFFFFF00000001
-	 * RMB
-	 * spin_trylock(wait_lock)
-	 * return
+	 * spinning writer                  up_write caller
+	 * ---------------                  -----------------------
+	 * [S] osq_unlock()                 [L] osq
+	 *  spin_lock(wait_lock)
+	 *  sem->count=0xFFFFFFFF00000001
+	 *            +0xFFFFFFFF00000000
+	 *  count=sem->count
+	 *  MB
+	 *                                   sem->count=0xFFFFFFFE00000001
+	 *                                             -0xFFFFFFFF00000001
+	 *                                   RMB
+	 *                                   spin_trylock(wait_lock)
+	 *                                   return
 	 * rwsem_try_write_lock(count)
 	 * spin_unlock(wait_lock)
 	 * schedule()

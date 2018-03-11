@@ -5,7 +5,6 @@
  * Copyright 2005 Openedhand Ltd.
  * Copyright (C) 2010 Slimlogic Ltd.
  * Copyright (C) 2010 Texas Instruments Inc.
- * Copyright (C) 2017 XiaoMi, Inc.
  *
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *         with code, comments and ideas from :-
@@ -47,7 +46,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/asoc.h>
 
-#define NAME_SIZE	128
+#define NAME_SIZE	32
 
 #ifdef CONFIG_DEBUG_FS
 struct dentry *snd_soc_debugfs_root;
@@ -1793,6 +1792,9 @@ static int soc_cleanup_card_resources(struct snd_soc_card *card)
 	for (i = 0; i < card->num_aux_devs; i++)
 		soc_remove_aux_dev(card, i);
 
+	/* free the ALSA card at first; this syncs with pending operations */
+	snd_card_free(card->snd_card);
+
 	/* remove and free each DAI */
 	soc_remove_dai_links(card);
 
@@ -1804,9 +1806,7 @@ static int soc_cleanup_card_resources(struct snd_soc_card *card)
 
 	snd_soc_dapm_free(&card->dapm);
 
-	snd_card_free(card->snd_card);
 	return 0;
-
 }
 
 /* removes a socdev */
@@ -2432,10 +2432,7 @@ int snd_soc_register_card(struct snd_soc_card *card)
 	if (card->rtd == NULL)
 		return -ENOMEM;
 	card->num_rtd = 0;
-	if (card->num_aux_devs > 0)
-		card->rtd_aux = &card->rtd[card->num_links];
-	else
-		card->rtd_aux = NULL;
+	card->rtd_aux = &card->rtd[card->num_links];
 
 	for (i = 0; i < card->num_links; i++) {
 		card->rtd[i].card = card;

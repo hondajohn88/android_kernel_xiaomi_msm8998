@@ -1,6 +1,6 @@
 /*
  * Copyright 2005, Red Hat, Inc., Ingo Molnar
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  * Released under the General Public License (GPL).
  *
  * This file contains the spinlock/rwlock implementations for

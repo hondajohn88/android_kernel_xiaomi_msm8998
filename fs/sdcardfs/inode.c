@@ -34,10 +34,14 @@ const struct cred *override_fsids(struct sdcardfs_sb_info *sbi,
 	if (!cred)
 		return NULL;
 
-	if (data->under_obb)
-		uid = AID_MEDIA_OBB;
-	else
-		uid = multiuser_get_uid(data->userid, sbi->options.fs_low_uid);
+	if (sbi->options.gid_derivation) {
+		if (data->under_obb)
+			uid = AID_MEDIA_OBB;
+		else
+			uid = multiuser_get_uid(data->userid, sbi->options.fs_low_uid);
+	} else {
+		uid = sbi->options.fs_low_uid;
+	}
 	cred->fsuid = make_kuid(&init_user_ns, uid);
 	cred->fsgid = make_kgid(&init_user_ns, sbi->options.fs_low_gid);
 
@@ -84,6 +88,7 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 	/* set last 16bytes of mode field to 0664 */
 	mode = (mode & S_IFMT) | 00664;
 
+	/* temporarily change umask for lower fs write */
 	saved_fs = current->fs;
 	copied_fs = copy_fs_struct(current->fs);
 	if (!copied_fs) {
@@ -101,7 +106,6 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 	if (err)
 		goto out;
 	fsstack_copy_attr_times(dir, sdcardfs_lower_inode(dir));
-	fsstack_copy_inode_size(dir, d_inode(lower_parent_dentry));
 	fixup_lower_ownership(dentry, dentry->d_name.name);
 
 out:
@@ -299,6 +303,7 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode
 	/* set last 16bytes of mode field to 0775 */
 	mode = (mode & S_IFMT) | 00775;
 
+	/* temporarily change umask for lower fs write */
 	saved_fs = current->fs;
 	copied_fs = copy_fs_struct(current->fs);
 	if (!copied_fs) {
@@ -590,7 +595,7 @@ static const char *sdcardfs_follow_link(struct dentry *dentry, void **cookie)
 
 static int sdcardfs_permission_wrn(struct inode *inode, int mask)
 {
-	WARN_RATELIMIT(1, "sdcardfs does not support permission. Use permission2.\n");
+	pr_debug("sdcardfs does not support permission. Use permission2.\n");
 	return -EINVAL;
 }
 
@@ -764,13 +769,9 @@ static int sdcardfs_setattr(struct vfsmount *mnt, struct dentry *dentry, struct 
 	 * afterwards in the other cases: we fsstack_copy_inode_size from
 	 * the lower level.
 	 */
-	if (current->mm)
-		down_write(&current->mm->mmap_sem);
 	if (ia->ia_valid & ATTR_SIZE) {
 		err = inode_newsize_ok(&tmp, ia->ia_size);
 		if (err) {
-			if (current->mm)
-				up_write(&current->mm->mmap_sem);
 			goto out;
 		}
 		truncate_setsize(inode, ia->ia_size);
@@ -793,8 +794,6 @@ static int sdcardfs_setattr(struct vfsmount *mnt, struct dentry *dentry, struct 
 	err = notify_change2(lower_mnt, lower_dentry, &lower_ia, /* note: lower_ia */
 			NULL);
 	mutex_unlock(&d_inode(lower_dentry)->i_mutex);
-	if (current->mm)
-		up_write(&current->mm->mmap_sem);
 	if (err)
 		goto out;
 

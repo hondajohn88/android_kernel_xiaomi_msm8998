@@ -5,7 +5,7 @@
  *
  *  Copyright (C) 2003 BULL SA
  *  Copyright (C) 2004-2006 Silicon Graphics, Inc.
- *  Copyright (C) 2017 XiaoMi, Inc.
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *
  */
 

@@ -181,7 +181,6 @@ static loff_t pstore_file_llseek(struct file *file, loff_t off, int whence)
 }
 
 static const struct file_operations pstore_file_operations = {
-	.owner		= THIS_MODULE,
 	.open		= pstore_file_open,
 	.read		= pstore_file_read,
 	.llseek		= pstore_file_llseek,
@@ -308,9 +307,9 @@ static ssize_t last_kmsg_read(struct file *file, char __user *buf,
 }
 
 static const struct file_operations last_kmsg_fops = {
-	.owner	= THIS_MODULE,
-	.read	= last_kmsg_read,
-	.llseek	= default_llseek,
+	.owner          = THIS_MODULE,
+	.read           = last_kmsg_read,
+	.llseek         = default_llseek,
 };
 #endif
 
@@ -494,6 +493,7 @@ static struct file_system_type pstore_fs_type = {
 static int __init init_pstore_fs(void)
 {
 	int err;
+
 #ifdef CONFIG_PSTORE_LAST_KMSG
 	struct proc_dir_entry *last_kmsg_entry = NULL;
 #endif
@@ -515,6 +515,7 @@ static int __init init_pstore_fs(void)
 		goto out;
 	}
 #endif
+
 out:
 	return err;
 }

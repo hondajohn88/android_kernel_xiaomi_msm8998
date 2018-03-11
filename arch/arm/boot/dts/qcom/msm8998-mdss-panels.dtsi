@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,6 +27,8 @@
 #include "dsi-panel-jdi-1080p-video.dtsi"
 #include "dsi-panel-jdi-fhd-r63452-cmd.dtsi"
 #include "dsi-panel-lgd-fhd-td4322-cmd.dtsi"
+#include "dsi-panel-lgd-sw43401-wqhd-cmd.dtsi"
+#include "dsi-panel-lgd-ea8151a-wqhd-cmd.dtsi"
 #include "dsi-panel-sharp-dualmipi-1080p-120hz.dtsi"
 #include "dsi-panel-jdi-a407-dualmipi-wqhd-cmd.dtsi"
 #include "dsi-panel-sim-video.dtsi"
@@ -35,6 +37,10 @@
 #include "dsi-panel-sim-dualmipi-cmd.dtsi"
 #include "dsi-panel-s6e3ha3-amoled-dualmipi-wqhd-cmd.dtsi"
 #include "dsi-panel-nt36850-truly-dualmipi-wqhd-cmd.dtsi"
+#include "dsi-panel-jdi-fhd-r63452-cmd.dtsi"
+#include "dsi-panel-lgd-fhd-td4322-cmd.dtsi"
+#include "dsi-panel-sharp-dualmipi-1080p-120hz.dtsi"
+#include "dsi-panel-jdi-a407-dualmipi-wqhd-cmd.dtsi"
 #include "dsi-panel-jdi-fhd-nt35596s-video.dtsi"
 #include "dsi-panel-jdi-fhd-nt35596s-pro-video.dtsi"
 #include "dsi-panel-ebbg-fhd-ft8716-video.dtsi"
@@ -152,6 +158,34 @@
 	};
 };
 
+
+
+&soc {
+	dsi_panel_pwr_supply_amoled: dsi_panel_pwr_supply_amoled {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "wqhd-vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			#qcom,supply-post-on-sleep = <5>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <0>;
+			qcom,supply-name = "vpnl";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <5>;
+		};
+	};
+};
 
 
 &soc {

@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -371,16 +371,16 @@ struct device_node *of_batterydata_get_best_profile(
 			}
 		}
 		rc = of_property_read_string(node, "qcom,battery-type",
-							&battery_type);
+				&battery_type);
 		if (!rc && strcmp(battery_type, "itech_3020mah") == 0)
-				generic_node = node;
+			generic_node = node;
 	}
 
 	if (best_node == NULL) {
-		/* now that best_node is null, there is no need to
-		 * check whether generic node is null. */
-		best_node = generic_node;
-		pr_err("No battery data found,use generic one\n");
+		 /* now that best_node is null, there is no need to
+				 * check whether generic node is null. */
+				best_node = generic_node;
+		pr_err("No battery data found, use generic one\n");
 		return best_node;
 	}
 

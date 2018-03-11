@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -50,10 +50,13 @@
 #define SRAM_READ		"fg_sram_read"
 #define SRAM_WRITE		"fg_sram_write"
 #define PROFILE_LOAD		"fg_profile_load"
-#define DELTA_SOC		"fg_delta_soc"
+#define TTF_PRIMING		"fg_ttf_priming"
 
-/* Delta BSOC votable reasons */
+/* Delta BSOC irq votable reasons */
 #define DELTA_BSOC_IRQ_VOTER	"fg_delta_bsoc_irq"
+
+/* Battery missing irq votable reasons */
+#define BATT_MISS_IRQ_VOTER	"fg_batt_miss_irq"
 
 #define DEBUG_PRINT_BUFFER_SIZE		64
 /* 3 byte address + 1 space character */
@@ -78,6 +81,8 @@
 #define SLOPE_LIMIT_COEFF_MAX		31
 
 #define BATT_THERM_NUM_COEFFS		3
+
+#define MAX_CC_STEPS			20
 
 /* Debug flag definitions */
 enum fg_debug_flag {
@@ -220,10 +225,22 @@ enum slope_limit_status {
 	SLOPE_LIMIT_NUM_COEFFS,
 };
 
+enum esr_timer_config {
+	TIMER_RETRY = 0,
+	TIMER_MAX,
+	NUM_ESR_TIMERS,
+};
+
+enum ttf_mode {
+	TTF_MODE_NORMAL = 0,
+	TTF_MODE_QNOVO,
+};
+
 /* DT parameters for FG device */
 struct fg_dt_props {
 	bool	force_load_profile;
 	bool	hold_soc_while_full;
+	bool	linearize_soc;
 	bool	auto_recharge_soc;
 	int	cutoff_volt_mv;
 	int	empty_volt_mv;
@@ -235,9 +252,9 @@ struct fg_dt_props {
 	int	recharge_soc_thr;
 	int	recharge_volt_thr_mv;
 	int	rsense_sel;
-	int	esr_timer_charging;
-	int	esr_timer_awake;
-	int	esr_timer_asleep;
+	int	esr_timer_charging[NUM_ESR_TIMERS];
+	int	esr_timer_awake[NUM_ESR_TIMERS];
+	int	esr_timer_asleep[NUM_ESR_TIMERS];
 	int	rconn_mohms;
 	int	esr_clamp_mohms;
 	int	cl_start_soc;
@@ -257,6 +274,7 @@ struct fg_dt_props {
 	int	slope_limit_temp;
 	int	esr_pulse_thresh_ma;
 	int	esr_meas_curr_ma;
+	int	ki_coeff_full_soc_dischg;
 	int	jeita_thresholds[NUM_JEITA_LEVELS];
 	int	ki_coeff_soc[KI_COEFF_SOC_LEVELS];
 	int	ki_coeff_med_dischg[KI_COEFF_SOC_LEVELS];
@@ -302,14 +320,29 @@ struct fg_irq_info {
 };
 
 struct fg_circ_buf {
-	int	arr[20];
+	int	arr[10];
 	int	size;
 	int	head;
+};
+
+struct fg_cc_step_data {
+	int arr[MAX_CC_STEPS];
+	int sel;
 };
 
 struct fg_pt {
 	s32 x;
 	s32 y;
+};
+
+struct ttf {
+	struct fg_circ_buf	ibatt;
+	struct fg_circ_buf	vbatt;
+	struct fg_cc_step_data	cc_step;
+	struct mutex		lock;
+	int			mode;
+	int			last_ttf;
+	s64			last_ms;
 };
 
 static const struct fg_pt fg_ln_table[] = {
@@ -351,12 +384,14 @@ struct fg_chip {
 	struct power_supply	*usb_psy;
 	struct power_supply	*dc_psy;
 	struct power_supply	*parallel_psy;
+	struct power_supply	*pc_port_psy;
 	struct iio_channel	*batt_id_chan;
 	struct iio_channel	*die_temp_chan;
 	struct fg_memif		*sram;
 	struct fg_irq_info	*irqs;
 	struct votable		*awake_votable;
 	struct votable		*delta_bsoc_irq_en_votable;
+	struct votable		*batt_miss_irq_en_votable;
 	struct fg_sram_param	*sp;
 	struct fg_alg_flag	*alg_flags;
 	int			*debug_mask;
@@ -366,9 +401,9 @@ struct fg_chip {
 	struct fg_cyc_ctr_data	cyc_ctr;
 	struct notifier_block	nb;
 	struct fg_cap_learning  cl;
+	struct ttf		ttf;
 	struct mutex		bus_lock;
 	struct mutex		sram_rw_lock;
-	struct mutex		batt_avg_lock;
 	struct mutex		charge_full_lock;
 	u32			batt_soc_base;
 	u32			batt_info_base;
@@ -378,15 +413,17 @@ struct fg_chip {
 	int			batt_id_ohms;
 	int			ki_coeff_full_soc;
 	int			charge_status;
-	int			prev_charge_status;
 	int			charge_done;
 	int			charge_type;
+	int			online_status;
 	int			last_soc;
 	int			last_batt_temp;
 	int			health;
 	int			maint_soc;
 	int			delta_soc;
 	int			last_msoc;
+	int			last_recharge_volt_mv;
+	int			esr_timer_charging_default[NUM_ESR_TIMERS];
 	enum slope_limit_status	slope_limit_sts;
 	bool			profile_available;
 	bool			profile_loaded;
@@ -405,12 +442,9 @@ struct fg_chip {
 	struct completion	soc_ready;
 	struct delayed_work	profile_load_work;
 	struct work_struct	status_change_work;
-	struct work_struct	cycle_count_work;
-	struct delayed_work	batt_avg_work;
+	struct delayed_work	ttf_work;
 	struct delayed_work	sram_dump_work;
 	struct delayed_work	soc_work;
-	struct fg_circ_buf	ibatt_circ_buf;
-	struct fg_circ_buf	vbatt_circ_buf;
 };
 
 /* Debugfs data structures are below */
@@ -464,8 +498,10 @@ extern void dump_sram(u8 *buf, int addr, int len);
 extern int64_t twos_compliment_extend(int64_t val, int s_bit_pos);
 extern s64 fg_float_decode(u16 val);
 extern bool is_input_present(struct fg_chip *chip);
+extern bool is_qnovo_en(struct fg_chip *chip);
 extern void fg_circ_buf_add(struct fg_circ_buf *, int);
 extern void fg_circ_buf_clr(struct fg_circ_buf *);
 extern int fg_circ_buf_avg(struct fg_circ_buf *, int *);
+extern int fg_circ_buf_median(struct fg_circ_buf *, int *);
 extern int fg_lerp(const struct fg_pt *, size_t, s32, s32 *);
 #endif

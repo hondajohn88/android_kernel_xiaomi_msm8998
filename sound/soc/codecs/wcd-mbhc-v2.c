@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -56,7 +56,6 @@
 #define WCD_MBHC_BTN_PRESS_COMPL_TIMEOUT_MS  50
 #define ANC_DETECT_RETRY_CNT 7
 #define WCD_MBHC_SPL_HS_CNT  1
-static struct wakeup_source *ws;
 
 static int det_extn_cable_en;
 module_param(det_extn_cable_en, int,
@@ -74,7 +73,6 @@ static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
 {
 	snd_soc_jack_report(jack, status, mask);
-	__pm_wakeup_event(ws, MSEC_PER_SEC / 3);
 }
 
 static void __hphocp_off_report(struct wcd_mbhc *mbhc, u32 jack_status,
@@ -347,6 +345,7 @@ out_micb_en:
 			/* Disable micbias, pullup & enable cs */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
 		mutex_unlock(&mbhc->hphl_pa_lock);
+		clear_bit(WCD_MBHC_ANC0_OFF_ACK, &mbhc->hph_anc_state);
 		break;
 	case WCD_EVENT_PRE_HPHR_PA_OFF:
 		mutex_lock(&mbhc->hphr_pa_lock);
@@ -364,6 +363,7 @@ out_micb_en:
 			/* Disable micbias, pullup & enable cs */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
 		mutex_unlock(&mbhc->hphr_pa_lock);
+		clear_bit(WCD_MBHC_ANC1_OFF_ACK, &mbhc->hph_anc_state);
 		break;
 	case WCD_EVENT_PRE_HPHL_PA_ON:
 		set_bit(WCD_MBHC_EVENT_PA_HPHL, &mbhc->event_state);
@@ -481,6 +481,25 @@ static void wcd_mbhc_clr_and_turnon_hph_padac(struct wcd_mbhc *mbhc)
 			 __func__);
 		usleep_range(wg_time * 1000, wg_time * 1000 + 50);
 	}
+
+	if (test_and_clear_bit(WCD_MBHC_ANC0_OFF_ACK,
+				&mbhc->hph_anc_state)) {
+		usleep_range(20000, 20100);
+		pr_debug("%s: HPHL ANC clear flag and enable ANC_EN\n",
+			__func__);
+		if (mbhc->mbhc_cb->update_anc_state)
+			mbhc->mbhc_cb->update_anc_state(mbhc->codec, true, 0);
+	}
+
+	if (test_and_clear_bit(WCD_MBHC_ANC1_OFF_ACK,
+				&mbhc->hph_anc_state)) {
+		usleep_range(20000, 20100);
+		pr_debug("%s: HPHR ANC clear flag and enable ANC_EN\n",
+			__func__);
+		if (mbhc->mbhc_cb->update_anc_state)
+			mbhc->mbhc_cb->update_anc_state(mbhc->codec, true, 1);
+	}
+
 }
 
 static bool wcd_mbhc_is_hph_pa_on(struct wcd_mbhc *mbhc)
@@ -512,6 +531,20 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 	}
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_HPH_PA_EN, 0);
 	usleep_range(wg_time * 1000, wg_time * 1000 + 50);
+
+
+	if (mbhc->mbhc_cb->is_anc_on && mbhc->mbhc_cb->is_anc_on(mbhc)) {
+		usleep_range(20000, 20100);
+		pr_debug("%s ANC is on, setting ANC_OFF_ACK\n", __func__);
+		set_bit(WCD_MBHC_ANC0_OFF_ACK, &mbhc->hph_anc_state);
+		set_bit(WCD_MBHC_ANC1_OFF_ACK, &mbhc->hph_anc_state);
+		if (mbhc->mbhc_cb->update_anc_state) {
+			mbhc->mbhc_cb->update_anc_state(mbhc->codec, false, 0);
+			mbhc->mbhc_cb->update_anc_state(mbhc->codec, false, 1);
+		} else {
+			pr_debug("%s ANC is off\n", __func__);
+		}
+	}
 }
 
 int wcd_mbhc_get_impedance(struct wcd_mbhc *mbhc, uint32_t *zl,
@@ -608,6 +641,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		hphrocp_off_report(mbhc, SND_JACK_OC_HPHR);
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
 		mbhc->current_plug = MBHC_PLUG_TYPE_NONE;
+		mbhc->force_linein = false;
 	} else {
 		/*
 		 * Report removal of current jack type.
@@ -619,7 +653,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		    jack_type == SND_JACK_LINEOUT) &&
 		    (mbhc->hph_status && mbhc->hph_status != jack_type)) {
 
-			if (mbhc->micbias_enable) {
+			if (mbhc->micbias_enable &&
+			    mbhc->hph_status == SND_JACK_HEADSET) {
 				if (mbhc->mbhc_cb->mbhc_micbias_control)
 					mbhc->mbhc_cb->mbhc_micbias_control(
 						codec, MIC_BIAS_2,
@@ -662,6 +697,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 						SND_JACK_LINEOUT |
 						SND_JACK_ANC_HEADPHONE |
 						SND_JACK_UNSUPPORTED);
+			mbhc->force_linein = false;
 		}
 
 		if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADSET &&
@@ -696,6 +732,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				 mbhc->zr < MAX_IMPED) &&
 				(jack_type == SND_JACK_HEADPHONE)) {
 				jack_type = SND_JACK_LINEOUT;
+				mbhc->force_linein = true;
 				mbhc->current_plug = MBHC_PLUG_TYPE_HIGH_HPH;
 				if (mbhc->hph_status) {
 					mbhc->hph_status &= ~(SND_JACK_HEADSET |
@@ -1388,7 +1425,11 @@ correct_plug_type:
 	if (!wrk_complete && mbhc->btn_press_intr) {
 		pr_debug("%s: Can be slow insertion of headphone\n", __func__);
 		wcd_cancel_btn_work(mbhc);
-		plug_type = MBHC_PLUG_TYPE_HEADPHONE;
+		/* Report as headphone only if previously
+		 * not reported as lineout
+		 */
+		if (!mbhc->force_linein)
+			plug_type = MBHC_PLUG_TYPE_HEADPHONE;
 	}
 	/*
 	 * If plug_tye is headset, we might have already reported either in
@@ -2158,6 +2199,7 @@ static int wcd_mbhc_initialise(struct wcd_mbhc *mbhc)
 	 * Also, disable hph_l pull-up current source as HS_DET_L is driven
 	 * by an external source
 	 */
+	/*if (mbhc->mbhc_cfg->enable_usbc_analog) {*/
 		mbhc->hphl_swh = 1;
 		mbhc->gnd_swh = 1;
 
@@ -2166,6 +2208,7 @@ static int wcd_mbhc_initialise(struct wcd_mbhc *mbhc)
 		else
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_HS_L_DET_PULL_UP_CTRL,
 						 0);
+	/*}*/
 
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_HPHL_PLUG_TYPE, mbhc->hphl_swh);
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_GND_PLUG_TYPE, mbhc->gnd_swh);
@@ -2924,7 +2967,7 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 		       mbhc->intr_ids->hph_right_ocp);
 		goto err_hphr_ocp_irq;
 	}
-	ws = wakeup_source_register(dev_name(codec->dev));
+
 	pr_debug("%s: leave ret %d\n", __func__, ret);
 	return ret;
 
@@ -2971,7 +3014,6 @@ void wcd_mbhc_deinit(struct wcd_mbhc *mbhc)
 	mutex_destroy(&mbhc->codec_resource_lock);
 	mutex_destroy(&mbhc->hphl_pa_lock);
 	mutex_destroy(&mbhc->hphr_pa_lock);
-	wakeup_source_unregister(ws);
 }
 EXPORT_SYMBOL(wcd_mbhc_deinit);
 

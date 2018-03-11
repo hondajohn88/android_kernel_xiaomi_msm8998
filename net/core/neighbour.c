@@ -859,7 +859,8 @@ static void neigh_probe(struct neighbour *neigh)
 	if (skb)
 		skb = skb_clone(skb, GFP_ATOMIC);
 	write_unlock(&neigh->lock);
-	neigh->ops->solicit(neigh, skb);
+	if (neigh->ops->solicit)
+		neigh->ops->solicit(neigh, skb);
 	atomic_inc(&neigh->probes);
 	kfree_skb(skb);
 }
@@ -934,8 +935,8 @@ static void neigh_timer_handler(unsigned long arg)
 	}
 
 	if (neigh->nud_state & NUD_IN_TIMER) {
-		if (time_before(next, jiffies + HZ/2))
-			next = jiffies + HZ/2;
+		if (time_before(next, jiffies + HZ / 4))
+			next = jiffies + HZ / 4;
 		if (!mod_timer(&neigh->timer, next))
 			neigh_hold(neigh);
 	}

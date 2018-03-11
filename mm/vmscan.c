@@ -2,6 +2,7 @@
  *  linux/mm/vmscan.c
  *
  *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *
  *  Swap reorganised 29.12.95, Stephen Tweedie.
  *  kswapd added: 7.1.96  sct
@@ -52,6 +53,7 @@
 
 #include <linux/swapops.h>
 #include <linux/balloon_compaction.h>
+#include <linux/rtmm.h>
 
 #include "internal.h"
 
@@ -290,6 +292,7 @@ static unsigned long do_shrink_slab(struct shrink_control *shrinkctl,
 	int nid = shrinkctl->nid;
 	long batch_size = shrinker->batch ? shrinker->batch
 					  : SHRINK_BATCH;
+	long scanned = 0, next_deferred;
 	long min_cache_size = batch_size;
 
 	if (current_is_kswapd())
@@ -315,7 +318,9 @@ static unsigned long do_shrink_slab(struct shrink_control *shrinkctl,
 		pr_err("shrink_slab: %pF negative objects to delete nr=%ld\n",
 		       shrinker->scan_objects, total_scan);
 		total_scan = freeable;
-	}
+		next_deferred = nr;
+	} else
+		next_deferred = total_scan;
 
 	/*
 	 * We need to avoid excessive windup on filesystem shrinkers
@@ -372,52 +377,28 @@ static unsigned long do_shrink_slab(struct shrink_control *shrinkctl,
 
 		count_vm_events(SLABS_SCANNED, nr_to_scan);
 		total_scan -= nr_to_scan;
+		scanned += nr_to_scan;
 
 		cond_resched();
 	}
 
+	if (next_deferred >= scanned)
+		next_deferred -= scanned;
+	else
+		next_deferred = 0;
 	/*
 	 * move the unused scan count back into the shrinker in a
 	 * manner that handles concurrent updates. If we exhausted the
 	 * scan, there is no need to do an update.
 	 */
-	if (total_scan > 0)
-		new_nr = atomic_long_add_return(total_scan,
+	if (next_deferred > 0)
+		new_nr = atomic_long_add_return(next_deferred,
 						&shrinker->nr_deferred[nid]);
 	else
 		new_nr = atomic_long_read(&shrinker->nr_deferred[nid]);
 
 	trace_mm_shrink_slab_end(shrinker, nid, freed, nr, new_nr, total_scan);
 	return freed;
-}
-
-static void shrink_slab_lmk(gfp_t gfp_mask, int nid,
-				 struct mem_cgroup *memcg,
-				 unsigned long nr_scanned,
-				 unsigned long nr_eligible)
-{
-	struct shrinker *shrinker;
-
-	if (nr_scanned == 0)
-		nr_scanned = SWAP_CLUSTER_MAX;
-
-	if (!down_read_trylock(&shrinker_rwsem))
-		goto out;
-
-	list_for_each_entry(shrinker, &shrinker_list, list) {
-		struct shrink_control sc = {
-			.gfp_mask = gfp_mask,
-		};
-
-		if (!(shrinker->flags & SHRINKER_LMK))
-			continue;
-
-		do_shrink_slab(&sc, shrinker, nr_scanned, nr_eligible);
-	}
-
-	up_read(&shrinker_rwsem);
-out:
-	cond_resched();
 }
 
 /**
@@ -480,9 +461,6 @@ static unsigned long shrink_slab(gfp_t gfp_mask, int nid,
 			.nid = nid,
 			.memcg = memcg,
 		};
-
-		if (shrinker->flags & SHRINKER_LMK)
-			continue;
 
 		if (memcg && !(shrinker->flags & SHRINKER_MEMCG_AWARE))
 			continue;
@@ -2297,23 +2275,6 @@ out:
 	}
 }
 
-#ifdef CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH
-static void init_tlb_ubc(void)
-{
-	/*
-	 * This deliberately does not clear the cpumask as it's expensive
-	 * and unnecessary. If there happens to be data in there then the
-	 * first SWAP_CLUSTER_MAX pages will send an unnecessary IPI and
-	 * then will be cleared.
-	 */
-	current->tlb_ubc.flush_required = false;
-}
-#else
-static inline void init_tlb_ubc(void)
-{
-}
-#endif /* CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH */
-
 /*
  * This is a basic per-zone page freer.  Used by both kswapd and direct reclaim.
  */
@@ -2347,8 +2308,6 @@ static void shrink_lruvec(struct lruvec *lruvec, int swappiness,
 	 */
 	scan_adjusted = (global_reclaim(sc) && !current_is_kswapd() &&
 			 sc->priority == DEF_PRIORITY);
-
-	init_tlb_ubc();
 
 	blk_start_plug(&plug);
 	while (nr[LRU_INACTIVE_ANON] || nr[LRU_ACTIVE_FILE] ||
@@ -2669,7 +2628,6 @@ static bool shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
 	gfp_t orig_mask;
 	enum zone_type requested_highidx = gfp_zone(sc->gfp_mask);
 	bool reclaimable = false;
-	unsigned long lru_pages = 0;
 
 	/*
 	 * If the number of buffer_heads in the machine exceeds the maximum
@@ -2687,7 +2645,7 @@ static bool shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
 		if (!populated_zone(zone))
 			continue;
 
-		classzone_idx = requested_highidx;
+		classzone_idx = gfp_zone(sc->gfp_mask);
 		while (!populated_zone(zone->zone_pgdat->node_zones +
 							classzone_idx))
 			classzone_idx--;
@@ -2697,7 +2655,6 @@ static bool shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
 		 * to global LRU.
 		 */
 		if (global_reclaim(sc)) {
-			lru_pages += zone_reclaimable_pages(zone);
 			if (!cpuset_zone_allowed(zone,
 						 GFP_KERNEL | __GFP_HARDWALL))
 				continue;
@@ -2748,9 +2705,6 @@ static bool shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
 			reclaimable = true;
 	}
 
-	if (global_reclaim(sc))
-		shrink_slab_lmk(sc->gfp_mask, 0, NULL,
-				sc->nr_scanned, lru_pages);
 	/*
 	 * Restore to original mask to avoid the impact on the caller if we
 	 * promoted it to __GFP_HIGHMEM.
@@ -3080,7 +3034,9 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
 					    sc.may_writepage,
 					    sc.gfp_mask);
 
+	current->flags |= PF_MEMALLOC;
 	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+	current->flags &= ~PF_MEMALLOC;
 
 	trace_mm_vmscan_memcg_reclaim_end(nr_reclaimed);
 
@@ -3227,8 +3183,7 @@ static bool prepare_kswapd_sleep(pg_data_t *pgdat, int order, long remaining,
  */
 static bool kswapd_shrink_zone(struct zone *zone,
 			       int classzone_idx,
-			       struct scan_control *sc,
-				unsigned long lru_pages)
+			       struct scan_control *sc)
 {
 	unsigned long balance_gap;
 	bool lowmem_pressure;
@@ -3255,8 +3210,6 @@ static bool kswapd_shrink_zone(struct zone *zone,
 		return true;
 
 	shrink_zone(zone, sc, zone_idx(zone) == classzone_idx);
-	shrink_slab_lmk(sc->gfp_mask, zone_to_nid(zone), NULL,
-			sc->nr_scanned, lru_pages);
 
 	clear_bit(ZONE_WRITEBACK, &zone->flags);
 
@@ -3314,7 +3267,6 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 
 	do {
 		bool raise_priority = true;
-		unsigned long lru_pages = 0;
 
 		sc.nr_reclaimed = 0;
 
@@ -3372,15 +3324,6 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		if (sc.priority < DEF_PRIORITY - 2)
 			sc.may_writepage = 1;
 
-		for (i = 0; i <= end_zone; i++) {
-			struct zone *zone = pgdat->node_zones + i;
-
-			if (!populated_zone(zone))
-				continue;
-
-			lru_pages += zone_reclaimable_pages(zone);
-		}
-
 		/*
 		 * Now scan the zone in the dma->highmem direction, stopping
 		 * at the last zone which needs scanning.
@@ -3417,7 +3360,7 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 			 * that that high watermark would be met at 100%
 			 * efficiency.
 			 */
-			if (kswapd_shrink_zone(zone, end_zone, &sc, lru_pages))
+			if (kswapd_shrink_zone(zone, end_zone, &sc))
 				raise_priority = false;
 		}
 
@@ -3682,6 +3625,43 @@ unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
 	return nr_reclaimed;
 }
 #endif /* CONFIG_HIBERNATION */
+
+#ifdef CONFIG_RTMM
+/*
+  * reclaim anon/file pages from global lru
+  *
+  * TODO: merge with shrink_all_memory()??
+  */
+unsigned long reclaim_global(unsigned long nr_to_reclaim)
+{
+	struct reclaim_state reclaim_state;
+	struct scan_control sc = {
+		.nr_to_reclaim = max(nr_to_reclaim, SWAP_CLUSTER_MAX),
+		.gfp_mask = GFP_HIGHUSER_MOVABLE,
+		.order = 0,
+		.priority = DEF_PRIORITY,
+		.may_writepage = 1,
+		.may_unmap = 1,
+		.may_swap = 1,
+	};
+	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
+	struct task_struct *p = current;
+	unsigned long nr_reclaimed;
+
+	p->flags |= PF_MEMALLOC;
+	lockdep_set_current_reclaim_state(sc.gfp_mask);
+	reclaim_state.reclaimed_slab = 0;
+	p->reclaim_state = &reclaim_state;
+
+	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+
+	p->reclaim_state = NULL;
+	lockdep_clear_current_reclaim_state();
+	p->flags &= ~PF_MEMALLOC;
+
+	return nr_reclaimed;
+}
+#endif
 
 /* It's optimal to keep kswapds on the same CPUs as their memory, but
    not required for correctness.  So if the last cpu in a node goes

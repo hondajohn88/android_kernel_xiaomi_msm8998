@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2017 XiaoMi, Inc.
- */
 #pragma once
 
 #define ELLIPTIC_SYSFS_ENGINE_FOLDER "engine"

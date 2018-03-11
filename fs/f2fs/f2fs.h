@@ -21,7 +21,6 @@
 #include <linux/sched.h>
 #include <linux/vmalloc.h>
 #include <linux/bio.h>
-#include <linux/f2fs_fs.h>
 
 #ifdef CONFIG_F2FS_CHECK_FS
 #define f2fs_bug_on(sbi, condition)	BUG_ON(condition)
@@ -413,7 +412,6 @@ struct f2fs_map_blocks {
 #define F2FS_ENCRYPTION_MODE_AES_256_GCM	2
 #define F2FS_ENCRYPTION_MODE_AES_256_CBC	3
 #define F2FS_ENCRYPTION_MODE_AES_256_CTS	4
-#define F2FS_ENCRYPTION_MODE_PRIVATE	127
 
 #include "f2fs_crypto.h"
 
@@ -1725,7 +1723,8 @@ void f2fs_msg(struct super_block *, const char *, const char *, ...);
 /*
  * hash.c
  */
-f2fs_hash_t f2fs_dentry_hash(const struct qstr *);
+f2fs_hash_t f2fs_dentry_hash(const struct qstr *name_info,
+				struct f2fs_filename *fname);
 
 /*
  * node.c
@@ -2173,19 +2172,6 @@ void f2fs_exit_crypto(void);
 
 int f2fs_has_encryption_key(struct inode *);
 
-static inline struct f2fs_crypt_info *f2fs_encryption_info(struct inode *inode)
-{
-	return F2FS_I(inode)->i_crypt_info;
-}
-
-static inline int f2fs_using_hardware_encryption(struct inode *inode)
-{
-	struct f2fs_crypt_info *ci = f2fs_encryption_info(inode);
-
-	return S_ISREG(inode->i_mode) && ci &&
-		ci->ci_data_mode == F2FS_ENCRYPTION_MODE_PRIVATE;
-}
-
 static inline int f2fs_get_encryption_info(struct inode *inode)
 {
 	struct f2fs_crypt_info *ci = F2FS_I(inode)->i_crypt_info;
@@ -2204,7 +2190,6 @@ int f2fs_fname_setup_filename(struct inode *, const struct qstr *,
 				int lookup, struct f2fs_filename *);
 void f2fs_fname_free_filename(struct f2fs_filename *);
 #else
-static inline int f2fs_using_hardware_encryption(struct inode *inode) { return 0; }
 static inline void f2fs_restore_and_release_control_page(struct page **p) { }
 static inline void f2fs_restore_control_page(struct page *p) { }
 

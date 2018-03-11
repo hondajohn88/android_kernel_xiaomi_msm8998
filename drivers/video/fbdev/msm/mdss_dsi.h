@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2017 XiaoMi, Inc.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -467,8 +467,11 @@ struct mdss_dsi_ctrl_pdata {
 	int bklt_en_gpio;
 	bool bklt_en_gpio_invert;
 	bool bklt_en_gpio_state;
+	int avdd_en_gpio;
+	bool avdd_en_gpio_invert;
 	int lcd_mode_sel_gpio;
 	int bklt_ctrl;	/* backlight ctrl */
+	enum dsi_ctrl_op_mode bklt_dcs_op_mode; /* backlight dcs ctrl mode */
 	u32 bklt_level;
 	bool pwm_pmi;
 	int pwm_period;
@@ -566,6 +569,10 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds dispparam_skin_ce_cmds;
 
 	struct dsi_panel_cmds dispparam_dimmingon_cmds;
+
+	struct dsi_panel_cmds displayoff_cmds;
+	struct dsi_panel_cmds displayon_cmds;
+	bool dsi_panel_off_mode;
 
 	struct dsi_panel_read xy_coordinate_cmds;
 	char panel_read_data[BUF_LEN_MAX];

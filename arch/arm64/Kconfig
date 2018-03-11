@@ -82,9 +82,12 @@ config ARM64
 	select HAVE_PERF_EVENTS
 	select HAVE_PERF_REGS
 	select HAVE_PERF_USER_STACK_DUMP
+	select HAVE_REGS_AND_STACK_ACCESS_API
 	select HAVE_RCU_TABLE_FREE
 	select HAVE_SYSCALL_TRACEPOINTS
 	select IOMMU_DMA if (IOMMU_SUPPORT && !ARCH_QCOM)
+	select HAVE_KPROBES
+	select HAVE_KRETPROBES if HAVE_KPROBES
 	select IRQ_DOMAIN
 	select IRQ_FORCED_THREADING
 	select MODULES_USE_ELF_RELA
@@ -99,6 +102,7 @@ config ARM64
 	select SPARSE_IRQ
 	select SYSCTL_EXCEPTION_TRACE
 	select HAVE_CONTEXT_TRACKING
+	select HAVE_ARM_SMCCC
 	help
 	  ARM 64-bit (AArch64) Linux support.
 
@@ -536,6 +540,37 @@ config ARM64_64K_PAGES
 
 endchoice
 
+config MSM_APP_API
+	bool "API support to enable / disable app settings for MSM8996"
+	depends on ARCH_MSM8996 && (ENABLE_FP_SIMD_SETTINGS || MSM_APP_SETTINGS)
+	help
+	  Add API support to enable / disable the app settings to be used
+	  at runtime. These APIs are used to enable / disable app setting
+	  when specific aarch32 or aarch64 processes are running.
+
+	  If you are not sure what to do, select 'N' here.
+
+config ENABLE_FP_SIMD_SETTINGS
+	bool "Enable FP(Floating Point) Settings for Qualcomm MSM8996"
+	depends on ARCH_MSM8996
+	select MSM_APP_API
+	help
+	  Enable FP(Floating Point) and SIMD settings for the MSM8996 during
+	  the execution of the aarch32 processes and disable these settings
+	  when you switch to the aarch64 processes.
+
+	  If you are not sure what to do, select 'N' here.
+
+config MSM_APP_SETTINGS
+	bool "Support to enable / disable app settings for MSM8996"
+	depends on ARCH_MSM8996
+	select MSM_APP_API
+	help
+	  Expose an interface used by the userspace at runtime to
+	  enable / disable the app specific settings.
+
+	  If you are not sure what to do, select 'N' here.
+
 choice
 	prompt "Virtual address space size"
 	default ARM64_VA_BITS_39 if ARM64_4K_PAGES
@@ -740,6 +775,23 @@ config FORCE_MAX_ZONEORDER
 	  However for 4K, we choose a higher default value, 11 as opposed to 10, giving us
 	  4M allocations matching the default size used by generic code.
 
+config HARDEN_BRANCH_PREDICTOR
+	bool "Harden the branch predictor against aliasing attacks" if EXPERT
+	default y
+	help
+	  Speculation attacks against some high-performance processors rely on
+	  being able to manipulate the branch predictor for a victim context by
+	  executing aliasing branches in the attacker context.  Such attacks
+	  can be partially mitigated against by clearing internal branch
+	  predictor state and limiting the prediction logic in some situations.
+
+	  This config option will take CPU-specific actions to harden the
+	  branch predictor against aliasing attacks and may rely on specific
+	  instruction sequences or control bits being set by the system
+	  firmware.
+
+	  If unsure, say Y.
+
 menuconfig ARMV8_DEPRECATED
 	bool "Emulate deprecated/obsolete ARMv8 instructions"
 	depends on COMPAT
@@ -806,6 +858,14 @@ config SETEND_EMULATION
 
 	  If unsure, say Y
 endif
+
+config ARM64_SW_TTBR0_PAN
+	bool "Emulate Privileged Access Never using TTBR0_EL1 switching"
+	help
+	  Enabling this option prevents the kernel from accessing
+	  user-space memory directly by pointing TTBR0_EL1 to a reserved
+	  zeroed area and reserved ASID. The user access routines
+	  restore the valid TTBR0_EL1 temporarily.
 
 menu "ARMv8.1 architectural features"
 
@@ -893,7 +953,7 @@ config RELOCATABLE
 
 config RANDOMIZE_BASE
 	bool "Randomize the address of the kernel image"
-	select ARM64_MODULE_PLTS
+	select ARM64_MODULE_PLTS if MODULES
 	select RELOCATABLE
 	help
 	  Randomizes the virtual address at which the kernel image is
@@ -1011,6 +1071,26 @@ config BUILD_ARM64_APPENDED_DTB_IMAGE
 	  DTBs to be built by default (instead of a standalone Image.gz.)
 	  The image will built in arch/arm64/boot/Image.gz-dtb
 
+choice
+	prompt "Appended DTB Kernel Image name"
+	depends on BUILD_ARM64_APPENDED_DTB_IMAGE
+	help
+	  Enabling this option will cause a specific kernel image Image or
+	  Image.gz to be used for final image creation.
+	  The image will built in arch/arm64/boot/IMAGE-NAME-dtb
+
+	config IMG_GZ_DTB
+		bool "Image.gz-dtb"
+	config IMG_DTB
+		bool "Image-dtb"
+endchoice
+
+config BUILD_ARM64_APPENDED_KERNEL_IMAGE_NAME
+	string
+	depends on BUILD_ARM64_APPENDED_DTB_IMAGE
+	default "Image.gz-dtb" if IMG_GZ_DTB
+	default "Image-dtb" if IMG_DTB
+
 config BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES
 	string "Default dtb names"
 	depends on BUILD_ARM64_APPENDED_DTB_IMAGE
@@ -1018,6 +1098,11 @@ config BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES
 	  Space separated list of names of dtbs to append when
 	  building a concatenated Image.gz-dtb.
 
+config BUILD_ARM64_DT_OVERLAY
+	bool "enable DT overlay compilation support"
+	depends on OF
+	help
+	  This option enables support for DT overlay compilation.
 endmenu
 
 menu "Userspace binary formats"
@@ -1052,6 +1137,14 @@ endmenu
 menu "Power management options"
 
 source "kernel/power/Kconfig"
+
+config ARCH_HIBERNATION_POSSIBLE
+	def_bool y
+	depends on CPU_PM
+
+config ARCH_HIBERNATION_HEADER
+	def_bool y
+	depends on HIBERNATION
 
 config ARCH_SUSPEND_POSSIBLE
 	def_bool y
@@ -1093,13 +1186,5 @@ config BOOT_INFO
 	bool "Boot information from bootloader"
 	default y
 	help
-	  On embedded linux device, we try to collect more information from
-	  bootloader to kernel. eg. powerup reason.
-
-config HWCONF_MANAGER
-	bool "Hardware configuration and monitor information"
-	default y
-	depends on CJSON
-	help
-	  It provides all kinds of components configuration information and
-	  monitor values.
+	 On embedded linux device, we try to collect more information from
+	 bootloader to kernel. eg. powerup reason.

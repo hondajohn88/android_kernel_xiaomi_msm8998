@@ -233,6 +233,7 @@ typedef void (dax_iodone_t)(struct buffer_head *bh_map, int uptodate);
 #define ATTR_KILL_PRIV	(1 << 14)
 #define ATTR_OPEN	(1 << 15) /* Truncating from open(O_TRUNC) */
 #define ATTR_TIMES_SET	(1 << 16)
+#define ATTR_TOUCH	(1 << 17)
 
 /*
  * Whiteout is represented by a char device.  The following constants define the
@@ -478,6 +479,7 @@ struct block_device {
 	int			bd_invalidated;
 	struct gendisk *	bd_disk;
 	struct request_queue *  bd_queue;
+	struct backing_dev_info *bd_bdi;
 	struct list_head	bd_list;
 	/*
 	 * Private data.  You must have bd_claim'ed the block_device
@@ -687,6 +689,11 @@ struct inode {
 
 	void			*i_private; /* fs or device private pointer */
 };
+
+static inline unsigned int i_blocksize(const struct inode *node)
+{
+	return (1 << node->i_blkbits);
+}
 
 static inline int inode_unhashed(struct inode *inode)
 {
@@ -906,6 +913,10 @@ struct file {
 	struct list_head	f_tfile_llink;
 #endif /* #ifdef CONFIG_EPOLL */
 	struct address_space	*f_mapping;
+
+#ifdef CONFIG_FILE_TABLE_DEBUG
+	struct hlist_node f_hash;
+#endif /* #ifdef CONFIG_FILE_TABLE_DEBUG */
 } __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
 
 struct file_handle {
@@ -1757,7 +1768,7 @@ struct super_operations {
 	void (*umount_begin) (struct super_block *);
 
 	int (*show_options)(struct seq_file *, struct dentry *);
-	int (*show_options2)(struct vfsmount *, struct seq_file *, struct dentry *);
+	int (*show_options2)(struct vfsmount *,struct seq_file *, struct dentry *);
 	int (*show_devname)(struct seq_file *, struct dentry *);
 	int (*show_path)(struct seq_file *, struct dentry *);
 	int (*show_stats)(struct seq_file *, struct dentry *);
@@ -2314,6 +2325,7 @@ extern struct kmem_cache *names_cachep;
 #ifdef CONFIG_BLOCK
 extern int register_blkdev(unsigned int, const char *);
 extern void unregister_blkdev(unsigned int, const char *);
+extern void bdev_unhash_inode(dev_t dev);
 extern struct block_device *bdget(dev_t);
 extern struct block_device *bdgrab(struct block_device *bdev);
 extern void bd_set_size(struct block_device *, loff_t size);
