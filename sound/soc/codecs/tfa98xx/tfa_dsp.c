@@ -933,12 +933,12 @@ enum Tfa98xx_Error tfa98xx_set_mtp(Tfa98xx_handle_t handle,
 	if (status == 0)
 		return Tfa98xx_Error_NoClock;
 
-	tfa98xx_key2(handle, 0); /* unlock */
+	tfa98xx_key2(handle , 0); /* unlock */
 	TFA_WRITE_REG(handle, MTP0, mtp_new); 	/* write to i2c shadow reg */
 	/* CIMTP=1 start copying all the data from i2c regs_mtp to mtp*/
 	TFA_SET_BF(handle, CIMTP, 1);
 	/* no check for MTPBUSY here, i2c delay assumed to be enough */
-	tfa98xx_key2(handle, 1); /* lock */
+	tfa98xx_key2(handle , 1); /* lock */
 
 	/* wait until MTP write is done
 	 */
@@ -2594,7 +2594,7 @@ enum Tfa98xx_Error tfaRunSpeakerCalibration(Tfa98xx_handle_t handle, int profile
 	enum Tfa98xx_Error err = Tfa98xx_Error_Ok;
 	int calibrateDone, spkr_count = 0;
 	/* Avoid warning in user-space */
-	profile = profile;
+	(void)profile;
 
 #ifdef __KERNEL__ /* Necessary otherwise we are thrown out of operating mode in kernel (because of internal clock) */
 	/* SL: In kernel, there's no clock available during cold start, therefore power down chip */

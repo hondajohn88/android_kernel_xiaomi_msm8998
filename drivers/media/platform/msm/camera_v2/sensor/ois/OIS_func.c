@@ -10,13 +10,9 @@
 
 #include "OIS_head.h"
 #include "OIS_defi.h"
-#if defined _CHIRON_OIS
+#ifdef CONFIG_MACH_CHIRON
 #include "OIS_prog_chiron.h"
 #include "OIS_coef_chiron.h"
-#elif defined OIS_GYRO_ST
-/*#ifdef OIS_GYRO_ST*/
-#include "OIS_prog_ST.h"
-#include "OIS_coef_ST.h"
 #else
 #include "OIS_coef.h"
 #include "OIS_prog.h"
@@ -237,11 +233,7 @@ void SET_FADJ_PARAM(const _FACT_ADJ *param)
 *****************************************************/
 /* #define ANGLE_LIMIT (0x3020) // (0x2BC0 * 1.1) // GYRSNS * limit[deg] */
 #define	ANGLE_LIMIT (OIS_UWORD)((GYRSNS * 11) / 10)	/* GYRSNS * limit[deg] */
-#ifdef OIS_GYRO_ST
-#define G_SENSE 114 /* [LSB/dps] for ST LSM6DSM */
-#else
 #define	G_SENSE	131 /* [LSB/dps] for INVEN ICG20690 */
-#endif
 
 ADJ_STS	func_SET_SCENE_PARAM(OIS_UBYTE u16_scene, OIS_UBYTE u16_mode, OIS_UBYTE filter, OIS_UBYTE range, const _FACT_ADJ *param)
 { /* RHM_HT 2013/04/15 Change "typedef" of return value */
@@ -370,7 +362,7 @@ ADJ_STS	func_SET_SCENE_PARAM_for_NewGYRO_Fil(OIS_UBYTE u16_scene, OIS_UBYTE u16_
 { /* RHM_HT 2013/04/15 Change "typedef" of return value */
 	OIS_UWORD u16_i;
 	OIS_UWORD u16_dat;
-#if defined _CHIRON_OIS
+#ifdef CONFIG_MACH_CHIRON
 	OIS_ULONG temp_x, temp_y;
 	OIS_UWORD u16_dat_x = 0;
 	OIS_UWORD u16_dat_y = 0;
@@ -465,7 +457,7 @@ ADJ_STS	func_SET_SCENE_PARAM_for_NewGYRO_Fil(OIS_UBYTE u16_scene, OIS_UBYTE u16_
 	/* u16_dat = temp / ANGLE_LIMIT; */
 	u16_dat = temp / angle_limit;
 
-  #if defined _CHIRON_OIS
+#ifdef CONFIG_MACH_CHIRON
 	temp_x = u16_dat*1064/1000;
 	temp_y = u16_dat*1088/1000;
 	u16_dat_x = temp_x;
@@ -487,7 +479,7 @@ ADJ_STS	func_SET_SCENE_PARAM_for_NewGYRO_Fil(OIS_UBYTE u16_scene, OIS_UBYTE u16_
 	I2C_OIS_mem_write(0x40, 0x7FF0);
 	I2C_OIS_mem_write(0xC0, 0x7FF0);
 
-#if defined _CHIRON_OIS
+#ifdef CONFIG_MACH_CHIRON
 	I2C_OIS_per_write(0xBB, 0x7F30);
 #endif
 	/* szx_2014/12/24 <=== */

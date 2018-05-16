@@ -18,68 +18,6 @@
 /* Following Variables that depend on user's environment RHM_HT 2013.03.13 add */
 OIS_UWORD FOCUS_VAL = 0x0122; /* Focus Value */
 
-#ifdef OIS_GYRO_ST
-OIS_UBYTE open_flag;
-/*********************************************************
-* ST Gyro - Disable SPI2
-* ---------------------------------------------------------
-* <Function>
-* To Disable SPI2 of ST gyro.
-* <Input>
-* none
-*
-* <Output>
-* none
-*
-*********************************************************/
-void Disable_SPI2_ST(void)
-{
-	OIS_UWORD u16_data = 0;
-	OIS_UBYTE loop = 10;
-
-	if (!open_flag) {
-		goto OUT;
-	} else {
-		I2C_OIS_mem_write(0x7F, 0x0080);  /*Stop SPI Communication */
-
-		I2C_OIS_per_write(0x18, 0x400F);  /*To Read CTRL1_OIS(0x70) register in LSM6DSM */
-		I2C_OIS_per_write(0x1B, 0xF000);
-		I2C_OIS_per_write(0x1C, 0xF000);
-
-		u16_data = I2C_OIS_per__read(0x1C);  /*To Read P_0x1C and check if LSB of data is 0xB1 */
-		u16_data &= 0x00FF;
-
-		if (u16_data == 0xB1) {
-			while (loop) {
-				I2C_OIS_per_write(0x18, 0x000F);  /* To Write OIS_EN_SPI2 = 0 in CTRL1_OIS register */
-				I2C_OIS_per_write(0x1B, 0x70B0);
-				I2C_OIS_per_write(0x1C, 0x70B0);
-
-				I2C_OIS_per_write(0x18, 0x400F);  /*To Check OIS_EN_SPI2 = 0, Read CTRL1_OIS(0x70) register; */
-				I2C_OIS_per_write(0x1B, 0xF000);
-				I2C_OIS_per_write(0x1C, 0xF000);
-
-				u16_data = I2C_OIS_per__read(0x1C);	/* Read P_0x1C and check if LSB of data is 0x00. */
-				u16_data &= 0x00FF;
-
-				if (u16_data == 0x00) {
-					pr_debug("%s:%d:loop = %d\n", __func__, __LINE__, loop);
-					break;
-				}
-				if (!loop) {
-					pr_debug("%s:%d:loop = %d\n", __func__, __LINE__, loop);
-					break;
-				}
-				loop--;
-				msleep(10);
-			}
-		}
-	}
-
-OUT:
-	return;
-}
-#endif
 /*********************************************************
 * VCOSET function
 * ---------------------------------------------------------

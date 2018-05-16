@@ -1,5 +1,4 @@
 /* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
- * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,7 +29,7 @@ struct msm_eeprom_ctrl_t;
 
 #define PROPERTY_MAXSIZE 32
 
-/* define eeprom information */
+#ifdef CONFIG_MACH_XIAOMI_MSM8998
 #define SEMCO 0x03
 #define LITEON 0x01
 #define SUNNY 0x15
@@ -88,6 +87,7 @@ struct sensor_info_t sensor_info[] = {
 	{S5K4H9, "s5k4h9"},
 	{OV5675, "ov5675"},
 };
+#endif
 
 struct msm_eeprom_ctrl_t {
 	struct platform_device *pdev;

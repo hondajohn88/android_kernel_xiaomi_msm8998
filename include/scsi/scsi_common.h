@@ -26,7 +26,6 @@ scsi_command_size(const unsigned char *cmnd)
 
 /* Returns a human-readable name for the device */
 extern const char *scsi_device_type(unsigned type);
-extern const char *scsi_device_name(const char *model);
 
 extern void int_to_scsilun(u64, struct scsi_lun *);
 extern u64 scsilun_to_int(struct scsi_lun *);

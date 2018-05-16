@@ -287,42 +287,6 @@ static char *factory_string[] = {
 	NULL,
 	};
 
-#if 0
-/* test limit config */
-#define TDDI_SHORT_LIMIT_B			150
-#define TDDI_NOISE_LIMIT			28
-
-/* #define ENABLE_EXTEND_EE_SHORT */
-#define TDDI_EXTEND_EE_SHORT_RESET_DUR  60
-#define TDDI_EXTEND_EE_SHORT_INT_DUR  150
-#define TDDI_EXTEND_EE_SHORT_TX_ON_COUNT  146
-#define TDDI_EXTEND_EE_SHORT_RX_ON_COUNT  146
-#define TDDI_EXTEND_EE_SHORT_TEST_LIMIT_PART1  100
-#define TDDI_EXTEND_EE_SHORT_TEST_LIMIT_PART2  96
-
-#define TDDI_OPEN_TEST_INT_DUR_ONE		145
-#define TDDI_OPEN_TEST_INT_DUR_TWO		15
-#define TDDI_OPEN_TEST_LIMIT_PHASE2_LOWER	50
-
-/* #define ENABLE_AMP_OPEN_B7 */
-#define TDDI_B7_OPEN_TEST_INT_DUR_ONE		23
-#define TDDI_B7_OPEN_TEST_INT_DUR_TWO		27
-#define TDDI_B7_OPEN_TEST_LIMIT_PHASE2_LOWER	0
-#define TDDI_B7_OPEN_TEST_LIMIT_PHASE2_UPPER   115
-
-#define BUTTON_COUNT 3
-#define ABS_0D_OPEN_FACTOR 8
-#define ABS_0D_OPEN_TEST_LIMIT 30
-
-#define ELEC_OPEN_TEST_TX_ON_COUNT 2
-#define ELEC_OPEN_TEST_RX_ON_COUNT 2
-#define ELEC_OPEN_INT_DUR_ONE 4
-#define ELEC_OPEN_INT_DUR_TWO 15
-#define ELEC_OPEN_TEST_LIMIT_ONE 500
-#define ELEC_OPEN_TEST_LIMIT_TWO 80
-/* test limit config - */
-#endif
-
 #define TEST_INVALID	0
 #define TEST_FAILED	1
 #define TEST_OK		2
@@ -3592,9 +3556,7 @@ static int tddi_ratio_calculation(signed short *p_image)
 		goto exit;
 	}
 
-
 	if (f54->swap_sensor_side) {
-
 		p_data_16 = p_image;
 		for (i = 0; i < rx_num; i++) {
 			for (j = 0; j < left_size; j++) {

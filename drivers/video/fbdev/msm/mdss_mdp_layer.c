@@ -1,5 +1,4 @@
 /* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1147,9 +1146,6 @@ static int __configure_pipe_params(struct msm_fb_data_type *mfd,
 	}
 
 	pipe->comp_ratio = layer->buffer.comp_ratio;
-
-	if (mfd->panel_orientation)
-		layer->flags ^= mfd->panel_orientation;
 
 	pipe->mixer_left = mixer;
 	pipe->mfd = mfd;

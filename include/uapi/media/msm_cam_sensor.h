@@ -39,6 +39,8 @@
 
 #define MSM_V4L2_PIX_FMT_META v4l2_fourcc('M', 'E', 'T', 'A') /* META */
 #define MSM_V4L2_PIX_FMT_META10 v4l2_fourcc('M', 'E', '1', '0') /* META10 */
+#define MSM_V4L2_PIX_FMT_META12 v4l2_fourcc('M', 'E', '1', '2') /* META12 */
+
 #define MSM_V4L2_PIX_FMT_SBGGR14 v4l2_fourcc('B', 'G', '1', '4')
 	/* 14  BGBG.. GRGR.. */
 #define MSM_V4L2_PIX_FMT_SGBRG14 v4l2_fourcc('G', 'B', '1', '4')
@@ -240,11 +242,13 @@ struct sensorb_cfg_data {
 	} cfg;
 };
 
+#ifdef CONFIG_MACH_XIAOMI_MSM8998
 struct sensorb_info_fusion_id {
 	char sensor_type;
 	char *data_buffer;
 	char data_nums;
 };
+#endif
 
 struct csid_cfg_data {
 	enum csid_cfg_type_t cfgtype;
@@ -361,7 +365,9 @@ enum msm_sensor_cfg_type_t {
 	CFG_WRITE_I2C_ARRAY_ASYNC,
 	CFG_WRITE_I2C_ARRAY_SYNC,
 	CFG_WRITE_I2C_ARRAY_SYNC_BLOCK,
+#ifdef CONFIG_MACH_XIAOMI_MSM8998
 	CFG_GET_SENSOR_FUSION_ID,
+#endif
 };
 
 enum msm_actuator_cfg_type_t {
@@ -635,11 +641,13 @@ struct sensor_init_cfg_data {
 #define VIDIOC_MSM_IR_CUT_CFG \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 15, struct msm_ir_cut_cfg_data_t)
 
+#ifdef CONFIG_MACH_XIAOMI_MSM8998
 #define VIDIOC_MSM_READ_FUSION_ID \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 16, struct sensorb_info_fusion_id)
 
 #define VIDIOC_MSM_READ_FUSION_ID_LEN \
 	_IOR('V', BASE_VIDIOC_PRIVATE + 16, uint8_t)
+#endif
 
 #define VIDIOC_MSM_LASER_LED_CFG \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 16, struct msm_laser_led_cfg_data_t)

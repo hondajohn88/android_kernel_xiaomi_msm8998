@@ -1,5 +1,4 @@
 /* Copyright (c) 2011-2014, 2017, The Linux Foundataion. All rights reserved.
- * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -767,10 +766,12 @@ int msm_camera_request_gpio_table(struct gpio *gpio_tbl, uint8_t size,
 				* apply new gpios, outout a error message
 				* for driver bringup debug
 				*/
-				rc = -err;
-				pr_err("%s:%d gpio %d:%s request fails, rc = %d\n",
+				pr_err("%s:%d gpio %d:%s request fails\n",
 					__func__, __LINE__,
-					gpio_tbl[i].gpio, gpio_tbl[i].label, rc);
+					gpio_tbl[i].gpio, gpio_tbl[i].label);
+#ifdef CONFIG_MACH_XIAOMI_MSM8998
+				rc = -err;
+#endif
 			}
 		}
 	} else {

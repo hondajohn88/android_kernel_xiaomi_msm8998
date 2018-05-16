@@ -9,7 +9,7 @@ config SPI_PEELIR
 	default y
 
 	---help---
-	  Enable this option if you use peelir
+	   Enable this option if you use peelir
 
 source "drivers/media/rc/keymaps/Kconfig"
 
